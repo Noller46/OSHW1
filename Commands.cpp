@@ -122,6 +122,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else {
         return new ExternalCommand(cmd_line);
     }
+
     return nullptr;
 }
 
@@ -170,8 +171,8 @@ void ShowPidCommand::execute() {
 }
 
 void GetCurrDirCommand::execute() {
-    char* temp = getcwd(NULL, 0);
-    cout << temp; // may need to change cout to the terminal
+    char* path = getcwd(NULL, 0);
+    cout << path; // may need to change cout to the terminal
 }
 
 Command::Command(const char* cmd_line) {
