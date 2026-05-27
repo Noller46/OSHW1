@@ -3,6 +3,7 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
+#include <cstring>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -98,13 +99,11 @@ public:
 class ChangePromptCommand : public BuiltInCommand {
     // TODO: Add your data members public:
 private:
-    char* prompt;
+    string prompt;
 
 public:
     ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
-        char* temp;
-        strcpy(temp, cmd_line);
-        prompt = temp;
+        prompt = cmd_line;
     }
 
     virtual ~ChangePromptCommand() {
@@ -263,7 +262,7 @@ class SmallShell {
 private:
     // TODO: Add your data members
     SmallShell();
-    char* text_prompt;
+    string text_prompt;
 
 public:
     Command *CreateCommand(const char *cmd_line);
@@ -283,9 +282,9 @@ public:
 
     // TODO: add extra methods as needed
 
-    char* getTextPrompt();
+    string getTextPrompt();
 
-    void change_prompt(const char *cmd_line = "smash> ");
+    void change_prompt(string str = "smash> ");
 };
 
 #endif //SMASH_COMMAND_H_

@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
+#include <cstring>
 
 using namespace std;
 
@@ -127,17 +128,14 @@ void SmallShell::executeCommand(const char *cmd_line) {
 }
 
 void ChangePromptCommand::execute() {
-    char* prompt = this->prompt;
-    SmallShell::getInstance().change_prompt(prompt);
+    SmallShell::getInstance().change_prompt(this->prompt);
 }
 
-void SmallShell::change_prompt(const char *cmd_line) {
-    char* temp;
-    strcpy(temp, cmd_line);
-    getInstance().text_prompt = temp;
+void SmallShell::change_prompt(string str) {
+    getInstance().text_prompt = str;
 }
 
-char* SmallShell::getTextPrompt() {
+string SmallShell::getTextPrompt() {
     return getInstance().text_prompt;
 }
 
