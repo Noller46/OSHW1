@@ -133,10 +133,6 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-void ChangePromptCommand::execute() {
-    SmallShell::getInstance().change_prompt(this->prompt);
-}
-
 void SmallShell::change_prompt(string str) {
     getInstance().text_prompt = str;
 }
@@ -145,17 +141,18 @@ string SmallShell::getTextPrompt() {
     return getInstance().text_prompt;
 }
 
+void ChangePromptCommand::execute() {
+    SmallShell::getInstance().change_prompt(this->prompt);
+}
+
 void ShowPidCommand::execute() {
-    cout << getpid(); // need to change cout to the terminal
+    cout << getpid(); // may need to change cout to the terminal
 }
 
 void GetCurrDirCommand::execute() {
-
+    char* getcwd(char* buf, size_t size);
+    cout << getcwd; // may need to change cout to the terminal
 }
-
-
-
-//sdfghjkjhgfdsdfghjkl
 
 Command::Command(const char* cmd_line) {
     // store cmd_line if needed later
