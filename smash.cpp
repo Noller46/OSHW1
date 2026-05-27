@@ -13,8 +13,7 @@ int main(int argc, char *argv[]) {
 
     SmallShell &smash = SmallShell::getInstance();
     while (true) {
-        std::cout << smash.getTextPrompt(); // may not work on the first iteration
-        //std::cout << "smash> ";
+        std::cout << smash.getTextPrompt();
         std::string cmd_line;
         std::getline(std::cin, cmd_line);
         smash.executeCommand(cmd_line.c_str());
