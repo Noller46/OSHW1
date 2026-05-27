@@ -139,6 +139,10 @@ string SmallShell::getTextPrompt() {
     return getInstance().text_prompt;
 }
 
+void ShowPidCommand::execute() {
+    cout << getpid(); // need to change cout to the terminal
+}
+
 
 
 //sdfghjkjhgfdsdfghjkl
