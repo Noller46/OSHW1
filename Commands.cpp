@@ -79,6 +79,8 @@ void _removeBackgroundSign(char *cmd_line) {
 SmallShell::SmallShell() {
     // TODO: add your implementation
     text_prompt = "smash> ";
+
+    //last_dir = getcwd(NULL, 0);
 }
 
 SmallShell::~SmallShell() {
@@ -198,3 +200,5 @@ GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_l
 ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {
     
 }
+
+//ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd): BuiltInCommand(cmd_line){}
