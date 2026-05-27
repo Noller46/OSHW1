@@ -102,9 +102,7 @@ private:
     string prompt;
 
 public:
-    ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
-        prompt = cmd_line;
-    }
+    ChangePromptCommand(const char* cmd_line);
 
     virtual ~ChangePromptCommand() {
     }
@@ -262,9 +260,7 @@ class SmallShell {
 private:
     // TODO: Add your data members
     SmallShell();
-    string text_prompt;
-
-
+    string text_prompt ;
 
 public:
     Command *CreateCommand(const char *cmd_line);

@@ -9,6 +9,7 @@
 #include <cstring>
 
 using namespace std;
+
 const std::string WHITESPACE = " \n\r\t\f\v";
 
 #if 0
@@ -77,6 +78,7 @@ void _removeBackgroundSign(char *cmd_line) {
 
 SmallShell::SmallShell() {
     // TODO: add your implementation
+    text_prompt = "smash> ";
 }
 
 SmallShell::~SmallShell() {
@@ -130,6 +132,9 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // Command* cmd = CreateCommand(cmd_line);
     // cmd->execute();
     // Please note that you must fork smash process for some commands (e.g., external commands....)
+
+    Command* cmd = CreateCommand(cmd_line);
+    cmd->execute();
 }
 
 void SmallShell::change_prompt(string str) {
@@ -138,6 +143,23 @@ void SmallShell::change_prompt(string str) {
 
 string SmallShell::getTextPrompt() {
     return getInstance().text_prompt;
+}
+
+ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int size = _parseCommandLine(cmd_line, args);
+    string temp = "smash";
+    if (size > 1) {
+        temp = string(args[1]);
+    }
+
+    // prompt = cmd_line;
+    // size_t white_space_index = prompt.find(' ');
+    // if (white_space_index != string::npos)
+    // {
+    //     prompt = prompt.substr(white_space_index + 1, white_space_index);
+    // }
+    prompt = temp + "> ";
 }
 
 void ChangePromptCommand::execute() {
@@ -152,7 +174,6 @@ void GetCurrDirCommand::execute() {
     char* path = getcwd(NULL, 0);
     cout << path; // may need to change cout to the terminal
 }
-
 
 Command::Command(const char* cmd_line) {
     // store cmd_line if needed later
