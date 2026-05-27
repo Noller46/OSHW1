@@ -7,6 +7,8 @@
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
+using namespace std;
+
 class Command {
     // TODO: Add your data members
 public:
@@ -91,6 +93,17 @@ public:
     }
 
     void execute() override;
+};
+
+class ChangePromptCommand : public BuiltInCommand {
+    // TODO: Add your data members public:
+
+    ChangePromptCommand(const char *cmd_line, char **plastPwd);
+
+    virtual ~ChangePromptCommand() {
+    }
+
+    void execute(const char *cmd_line); // removed override hear, may be wrong to do so;
 };
 
 class ChangeDirCommand : public BuiltInCommand {
@@ -243,6 +256,7 @@ class SmallShell {
 private:
     // TODO: Add your data members
     SmallShell();
+    char* text_prompt;
 
 public:
     Command *CreateCommand(const char *cmd_line);
@@ -261,6 +275,10 @@ public:
     void executeCommand(const char *cmd_line);
 
     // TODO: add extra methods as needed
+
+    char* getTextPrompt();
+
+    void change_prompt(const char *cmd_line = "smash> ");
 };
 
 #endif //SMASH_COMMAND_H_
