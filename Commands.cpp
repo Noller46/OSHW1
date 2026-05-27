@@ -9,7 +9,6 @@
 #include <cstring>
 
 using namespace std;
-
 const std::string WHITESPACE = " \n\r\t\f\v";
 
 #if 0
@@ -150,9 +149,10 @@ void ShowPidCommand::execute() {
 }
 
 void GetCurrDirCommand::execute() {
-    char* getcwd(char* buf, size_t size);
-    cout << getcwd; // may need to change cout to the terminal
+    char* path = getcwd(NULL, 0);
+    cout << path; // may need to change cout to the terminal
 }
+
 
 Command::Command(const char* cmd_line) {
     // store cmd_line if needed later
