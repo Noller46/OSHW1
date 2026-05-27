@@ -115,6 +115,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord.compare("showpid") == 0) {
         return new ShowPidCommand(cmd_line);
     }
+    else if (firstWord.compare("pwd") == 0) {
+        return new GetCurrDirCommand(cmd_line);
+    }
     else {
         return new ExternalCommand(cmd_line);
     }
@@ -147,5 +150,9 @@ void ChangePromptCommand::execute() {
 
 void ShowPidCommand::execute() {
     cout << getpid(); // need to change cout to the terminal
+}
+
+void GetCurrDirCommand::execute() {
+
 }
 
