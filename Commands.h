@@ -15,7 +15,7 @@ class Command {
 public:
     Command(const char *cmd_line);
 
-    virtual ~Command();
+    virtual ~Command() = default;
 
     virtual void execute() = 0;
 
@@ -263,6 +263,8 @@ private:
     // TODO: Add your data members
     SmallShell();
     string text_prompt;
+
+
 
 public:
     Command *CreateCommand(const char *cmd_line);

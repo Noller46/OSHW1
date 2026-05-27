@@ -139,3 +139,23 @@ string SmallShell::getTextPrompt() {
     return getInstance().text_prompt;
 }
 
+
+
+//sdfghjkjhgfdsdfghjkl
+
+Command::Command(const char* cmd_line) {
+    // store cmd_line if needed later
+}
+
+// add to Commands.cpp
+BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {
+}
+
+ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
+    // store cmd_line if needed later
+}
+
+void ExternalCommand::execute() {
+    // your implementation or leave empty for now
+}
+
