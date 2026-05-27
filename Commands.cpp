@@ -112,6 +112,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("chprompt") == 0) {
         return new ChangePromptCommand(cmd_line);
     }
+    else if (firstWord.compare("showpid") == 0) {
+        return new ShowPidCommand(cmd_line);
+    }
     else {
         return new ExternalCommand(cmd_line);
     }
@@ -125,10 +128,9 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // Command* cmd = CreateCommand(cmd_line);
     // cmd->execute();
     // Please note that you must fork smash process for some commands (e.g., external commands....)
-}
 
-void ChangePromptCommand::execute() {
-    SmallShell::getInstance().change_prompt(this->prompt);
+    Command* cmd = CreateCommand(cmd_line);
+    cmd->execute();
 }
 
 void SmallShell::change_prompt(string str) {
@@ -137,5 +139,13 @@ void SmallShell::change_prompt(string str) {
 
 string SmallShell::getTextPrompt() {
     return getInstance().text_prompt;
+}
+
+void ChangePromptCommand::execute() {
+    SmallShell::getInstance().change_prompt(this->prompt);
+}
+
+void ShowPidCommand::execute() {
+    cout << getpid(); // need to change cout to the terminal
 }
 
