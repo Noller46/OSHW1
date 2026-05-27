@@ -97,13 +97,20 @@ public:
 
 class ChangePromptCommand : public BuiltInCommand {
     // TODO: Add your data members public:
+private:
+    char* prompt;
 
-    ChangePromptCommand(const char *cmd_line, char **plastPwd);
+public:
+    ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
+        char* temp;
+        strcpy(temp, cmd_line);
+        prompt = temp;
+    }
 
     virtual ~ChangePromptCommand() {
     }
 
-    void execute(const char *cmd_line); // removed override hear, may be wrong to do so;
+    void execute() override; // removed override hear, may be wrong to do so;
 };
 
 class ChangeDirCommand : public BuiltInCommand {

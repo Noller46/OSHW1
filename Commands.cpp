@@ -104,6 +104,17 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
       return new ExternalCommand(cmd_line);
     }
     */
+
+    string cmd_s = _trim(string(cmd_line));
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+
+    if (firstWord.compare("chprompt") == 0) {
+        return new ChangePromptCommand(cmd_line);
+    }
+    else {
+        return new ExternalCommand(cmd_line);
+    }
+
     return nullptr;
 }
 
@@ -115,9 +126,8 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-void ChangePromptCommand::execute(const char *cmd_line) {
-    char* prompt;
-    strcpy(prompt, cmd_line);
+void ChangePromptCommand::execute() {
+    char* prompt = this->prompt;
     SmallShell::getInstance().change_prompt(prompt);
 }
 
