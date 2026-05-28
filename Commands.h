@@ -96,6 +96,7 @@ public:
     void execute() override;
 };
 
+//tested
 class ChangePromptCommand : public BuiltInCommand {
     // TODO: Add your data members public:
 private:
@@ -110,8 +111,12 @@ public:
     void execute() override; // removed override hear, may be wrong to do so;
 };
 
+//in progress
 class ChangeDirCommand : public BuiltInCommand {
     // TODO: Add your data members public:
+private:
+    char* path;
+public:
     ChangeDirCommand(const char *cmd_line, char **plastPwd);
 
     virtual ~ChangeDirCommand() {
@@ -120,6 +125,7 @@ class ChangeDirCommand : public BuiltInCommand {
     void execute() override;
 };
 
+//untested
 class GetCurrDirCommand : public BuiltInCommand {
 public:
     GetCurrDirCommand(const char *cmd_line);
@@ -130,6 +136,7 @@ public:
     void execute() override;
 };
 
+//untested
 class ShowPidCommand : public BuiltInCommand {
 public:
     ShowPidCommand(const char *cmd_line);
@@ -140,8 +147,10 @@ public:
     void execute() override;
 };
 
+//only after background
 class JobsList;
 
+//only after background
 class QuitCommand : public BuiltInCommand {
     // TODO: Add your data members public:
     QuitCommand(const char *cmd_line, JobsList *jobs);
@@ -152,6 +161,7 @@ class QuitCommand : public BuiltInCommand {
     void execute() override;
 };
 
+//only after background
 class JobsList {
 public:
     class JobEntry {
@@ -183,6 +193,7 @@ public:
     // TODO: Add extra methods or modify exisitng ones as needed
 };
 
+//only after background
 class JobsCommand : public BuiltInCommand {
     // TODO: Add your data members
 public:
@@ -194,6 +205,7 @@ public:
     void execute() override;
 };
 
+//only after background
 class KillCommand : public BuiltInCommand {
     // TODO: Add your data members
 public:
@@ -205,6 +217,7 @@ public:
     void execute() override;
 };
 
+//only after background
 class ForegroundCommand : public BuiltInCommand {
     // TODO: Add your data members
 public:
@@ -260,7 +273,9 @@ class SmallShell {
 private:
     // TODO: Add your data members
     SmallShell();
-    string text_prompt ;
+    string text_prompt;
+
+    //char* last_dir;
 
 public:
     Command *CreateCommand(const char *cmd_line);
