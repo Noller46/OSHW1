@@ -162,12 +162,12 @@ void ChangePromptCommand::execute() {
 }
 
 void ShowPidCommand::execute() {
-    cout << getpid(); // may need to change cout to the terminal
+    cout << "smash pid is " << getpid() << endl; // may need to change cout to the terminal
 }
 
 void GetCurrDirCommand::execute() {
     char* path = getcwd(NULL, 0);
-    cout << path; // may need to change cout to the terminal
+    cout << path << endl; // may need to change cout to the terminal
 }
 
 Command::Command(const char* cmd_line) {
