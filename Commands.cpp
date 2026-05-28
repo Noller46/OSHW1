@@ -79,8 +79,7 @@ void _removeBackgroundSign(char *cmd_line) {
 SmallShell::SmallShell() {
     // TODO: add your implementation
     text_prompt = "smash> ";
-
-    //last_dir = getcwd(NULL, 0);
+    last_dir = nullptr;
 }
 
 SmallShell::~SmallShell() {
@@ -121,6 +120,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord.compare("pwd") == 0) {
         return new GetCurrDirCommand(cmd_line);
     }
+    else if (firstWord.compare("cd") == 0) {
+        return new GetCurrDirCommand(cmd_line);
+    }
     else {
         return new ExternalCommand(cmd_line);
     }
@@ -143,13 +145,18 @@ void SmallShell::change_prompt(string str) {
     getInstance().text_prompt = str;
 }
 
-string SmallShell::getTextPrompt() {
+string SmallShell::get_text_prompt() {
     return getInstance().text_prompt;
+}
+
+void SmallShell::set_last_dir(char* str) {
+    getInstance().last_dir = str;
 }
 
 ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
     char** args = new char*[COMMAND_MAX_ARGS];
     int size = _parseCommandLine(cmd_line, args);
+
     string temp = "smash";
     if (size > 1) {
         temp = string(args[1]);
@@ -165,10 +172,44 @@ void ShowPidCommand::execute() {
     cout << "smash pid is " << getpid() << endl; // may need to change cout to the terminal
 }
 
+ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
+
 void GetCurrDirCommand::execute() {
     char* path = getcwd(NULL, 0);
     cout << path << endl; // may need to change cout to the terminal
 }
+
+GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
+
+ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
+    BuiltInCommand(cmd_line), last_dir_pointer(plastPwd) {
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int size = _parseCommandLine(cmd_line, args);
+
+    if (size > 2) {
+        cout << "smash error: cd: too many arguments" << endl;
+    }
+    else if (size == 2) {
+        path = args[1];
+        if (path[0] == '-' && path[1] == '\0') {
+            if (*last_dir_pointer != nullptr) {
+                path = *last_dir_pointer;
+            }
+            else {
+                cout << "smash error: cd: OLDPWD not set" << endl;
+            }
+        }
+    }
+}
+
+void ChangeDirCommand::execute() {
+    if (valid_command) {
+        chdir(path); // if this fails, needs to send an error
+        SmallShell::getInstance().set_last_dir(getcwd(NULL, 0));
+    }
+}
+
+
 
 Command::Command(const char* cmd_line) {
     // store cmd_line if needed later
@@ -185,13 +226,3 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
 void ExternalCommand::execute() {
     // your implementation or leave empty for now
 }
-
-GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_line) {
-
-}
-
-ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {
-    
-}
-
-//ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd): BuiltInCommand(cmd_line){}

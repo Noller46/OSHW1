@@ -116,6 +116,9 @@ class ChangeDirCommand : public BuiltInCommand {
     // TODO: Add your data members public:
 private:
     char* path;
+    char** last_dir_pointer;
+    bool valid_command;
+
 public:
     ChangeDirCommand(const char *cmd_line, char **plastPwd);
 
@@ -125,7 +128,7 @@ public:
     void execute() override;
 };
 
-//untested
+//tested
 class GetCurrDirCommand : public BuiltInCommand {
 public:
     GetCurrDirCommand(const char *cmd_line);
@@ -136,7 +139,7 @@ public:
     void execute() override;
 };
 
-//untested
+//tested
 class ShowPidCommand : public BuiltInCommand {
 public:
     ShowPidCommand(const char *cmd_line);
@@ -274,8 +277,7 @@ private:
     // TODO: Add your data members
     SmallShell();
     string text_prompt;
-
-    //char* last_dir;
+    char* last_dir;
 
 public:
     Command *CreateCommand(const char *cmd_line);
@@ -295,9 +297,11 @@ public:
 
     // TODO: add extra methods as needed
 
-    string getTextPrompt();
+    string get_text_prompt();
 
     void change_prompt(string str = "smash> ");
+
+    void set_last_dir(char* str);
 };
 
 #endif //SMASH_COMMAND_H_
