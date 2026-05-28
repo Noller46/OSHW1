@@ -152,13 +152,6 @@ ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(c
     if (size > 1) {
         temp = string(args[1]);
     }
-
-    // prompt = cmd_line;
-    // size_t white_space_index = prompt.find(' ');
-    // if (white_space_index != string::npos)
-    // {
-    //     prompt = prompt.substr(white_space_index + 1, white_space_index);
-    // }
     prompt = temp + "> ";
 }
 
