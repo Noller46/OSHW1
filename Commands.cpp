@@ -121,7 +121,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         return new GetCurrDirCommand(cmd_line);
     }
     else if (firstWord.compare("cd") == 0) {
-        return new GetCurrDirCommand(cmd_line);
+        return new ChangeDirCommand(cmd_line, &getInstance().last_dir);
     }
     else {
         return new ExternalCommand(cmd_line);
@@ -147,6 +147,10 @@ void SmallShell::change_prompt(string str) {
 
 string SmallShell::get_text_prompt() {
     return getInstance().text_prompt;
+}
+
+char* SmallShell::get_last_dir() {
+    return getInstance().last_dir;
 }
 
 void SmallShell::set_last_dir(char* str) {
@@ -194,6 +198,7 @@ ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
         if (path[0] == '-' && path[1] == '\0') {
             if (*last_dir_pointer != nullptr) {
                 path = *last_dir_pointer;
+                //cout << path;
             }
             else {
                 cout << "smash error: cd: OLDPWD not set" << endl;
@@ -204,8 +209,8 @@ ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
 
 void ChangeDirCommand::execute() {
     if (valid_command) {
-        chdir(path); // if this fails, needs to send an error
         SmallShell::getInstance().set_last_dir(getcwd(NULL, 0));
+        chdir(path); // if this fails, needs to send an error
     }
 }
 

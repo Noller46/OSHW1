@@ -301,6 +301,8 @@ public:
 
     void change_prompt(string str = "smash> ");
 
+    char* get_last_dir();
+
     void set_last_dir(char* str);
 };
 
