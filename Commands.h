@@ -33,6 +33,8 @@ public:
 };
 
 class ExternalCommand : public Command {
+private:
+    std::vector<char*> args;
 public:
     ExternalCommand(const char *cmd_line);
 

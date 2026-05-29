@@ -111,7 +111,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
     if (firstWord.compare("chprompt") == 0) {
         return new ChangePromptCommand(cmd_line);
     }
@@ -122,6 +121,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         return new GetCurrDirCommand(cmd_line);
     }
     else {
+        ////asdfghjkl;jhgfdsdfghjkl
         return new ExternalCommand(cmd_line);
     }
 
@@ -186,10 +186,24 @@ BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {
 }
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
+    char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
+    _parseCommandLine(cmd_line, aug);
+    int i = 0;
+    while (aug[i] != NULL) {
+        args.push_back(aug[i]);
+        i ++;
+    }
     // store cmd_line if needed later
 }
 
 void ExternalCommand::execute() {
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        execvp(args[0], args.data());
+    } else if (pid > 0) {
+        wait(NULL);
+    }
     // your implementation or leave empty for now
 }
 
