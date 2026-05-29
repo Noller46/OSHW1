@@ -112,6 +112,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("alias") == 0) {
         return new AliasCommand(cmd_line);
     }
+    if (firstWord.compare("unalias") == 0) {
+        return new UnAliasCommand(cmd_line);
+    }
     for (auto i : getInstance().get_alias_list()) {
         if (get<0>(i) == string(firstWord)) {
             return new AliassedCommand(cmd_line, get<1>(i));
@@ -152,14 +155,15 @@ void SmallShell::add_alias(string alias, string command, string cmd_line) {
     alias_list.push_back(tuple<string, string, string>(alias, command, cmd_line));
 }
 
-void SmallShell::remove_alias(string alias) {
+bool SmallShell::remove_alias(string alias) {
     for (auto i = alias_list.begin(); i != alias_list.end(); i++) {
         if (get<0>(*i) == alias) {
             alias_list.erase(i);
+            return true;
         }
     }
+    return false;
 }
-
 
 vector<tuple<string, string, string>> SmallShell::get_alias_list() {
     return alias_list;
@@ -249,7 +253,7 @@ void AliasCommand::execute() {
                 alias == "fg" || alias == "quit" || alias == "kill" || alias == "alias" || alias == "unalias" ||
                 alias == "unsetenv " || alias == "sysinfo" || alias == "du" || alias == "whoami" ||
                 alias == "usbinfo ") { // may need to add more
-                cout << "smash error: alias: <" << alias << "> already exists or is a reserved command" << endl;
+                cout << "smash error: alias: " << alias << " already exists or is a reserved command" << endl;
             }
 
             for (auto i : SmallShell::getInstance().get_alias_list()) {
@@ -266,7 +270,6 @@ void AliasCommand::execute() {
     }
 }
 
-
 AliassedCommand::AliassedCommand(const char *cmd_line, string command) : BuiltInCommand(cmd_line),
 cmd_line(cmd_line), command(command) {}
 
@@ -274,6 +277,26 @@ void AliassedCommand::execute() {
     string temp = replace_first_word(cmd_line, command);
     Command* cmd = SmallShell::getInstance().CreateCommand(temp.c_str());
     cmd->execute();
+}
+
+UnAliasCommand::UnAliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
+
+void UnAliasCommand::execute() {
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int size = _parseCommandLine(cmd_line, args);
+
+    if (size == 1) {
+        cout << "smash error: unalias: not enough arguments" << endl;
+    }
+    else {
+        for (int i = 1; i < size; ++i) {
+            char* name = args[i];
+            if (!SmallShell::getInstance().remove_alias(name)) {
+                cout << "smash error: unalias: " << name << " alias does not exist" << endl;
+                return;
+            }
+        }
+    }
 }
 
 

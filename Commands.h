@@ -267,6 +267,8 @@ public:
 };
 
 class UnAliasCommand : public BuiltInCommand {
+private:
+    const char* cmd_line;
 public:
     UnAliasCommand(const char *cmd_line);
 
@@ -334,7 +336,7 @@ public:
 
     void add_alias(string alias, string command, string cmd_line);
 
-    void remove_alias(string alias);
+    bool remove_alias(string alias);
 };
 
 
