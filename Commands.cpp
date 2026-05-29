@@ -128,9 +128,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("unalias") == 0) {
         return new UnAliasCommand(cmd_line);
     }
-    // if (firstWord.compare("unsetenv") == 0) {
-    //     return new UnSetEnvCommand(cmd_line);
-    // }
+    if (firstWord.compare("unsetenv") == 0) {
+        return new UnSetEnvCommand(cmd_line);
+    }
     if (firstWord.compare("sysinfo") == 0) {
         return new SysInfoCommand(cmd_line);
     }
@@ -316,6 +316,12 @@ void UnAliasCommand::execute() {
             }
         }
     }
+}
+
+UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+void UnSetEnvCommand::execute() {
+    
 }
 
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
