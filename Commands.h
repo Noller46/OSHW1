@@ -241,7 +241,7 @@ public:
     void execute() override;
 };
 
-//in progress
+//tested
 class AliasCommand : public BuiltInCommand {
 private:
     const char* cmd_line;
@@ -254,6 +254,7 @@ public:
     void execute() override;
 };
 
+//tested
 class AliassedCommand : public BuiltInCommand {
     const char* cmd_line;
     string command;
@@ -266,6 +267,7 @@ public:
     void execute() override;
 };
 
+//tested
 class UnAliasCommand : public BuiltInCommand {
 private:
     const char* cmd_line;

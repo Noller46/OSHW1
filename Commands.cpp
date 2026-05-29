@@ -11,6 +11,7 @@
 
 #include <regex>
 #include <tuple>
+#include <sys/utsname.h> // might be illegal
 
 using namespace std;
 
@@ -109,11 +110,29 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("cd") == 0) {
         return new ChangeDirCommand(cmd_line, &getInstance().last_dir);
     }
+    // if (firstWord.compare("jobs") == 0) {
+    //     return new JobsCommand(cmd_line, jobs);
+    // }
+    // if (firstWord.compare("fg") == 0) {
+    //     return new ForegroundCommand(cmd_line, jobs);
+    // }
+    // if (firstWord.compare("quit") == 0) {
+    //     return new QuitCommand(cmd_line, jobs);
+    // }
+    // if (firstWord.compare("kill") == 0) {
+    //     return new KillCommand(cmd_line, jobs);
+    // }
     if (firstWord.compare("alias") == 0) {
         return new AliasCommand(cmd_line);
     }
     if (firstWord.compare("unalias") == 0) {
         return new UnAliasCommand(cmd_line);
+    }
+    // if (firstWord.compare("unsetenv") == 0) {
+    //     return new UnSetEnvCommand(cmd_line);
+    // }
+    if (firstWord.compare("sysinfo") == 0) {
+        return new SysInfoCommand(cmd_line);
     }
     for (auto i : getInstance().get_alias_list()) {
         if (get<0>(i) == string(firstWord)) {
@@ -297,6 +316,18 @@ void UnAliasCommand::execute() {
             }
         }
     }
+}
+
+SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+void SysInfoCommand::execute() { // works somehow
+    struct utsname info;
+    uname(&info);
+
+    cout << "System: " << info.sysname << endl;
+    cout << "Hostname: " << info.nodename << endl;
+    cout << "Kernel: " << info.release << endl;
+    cout << "Architecture: " << info.machine << endl;
 }
 
 
