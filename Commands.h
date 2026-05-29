@@ -4,11 +4,20 @@
 
 #include <vector>
 #include <cstring>
+//#include <iostream>
+#include <memory>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
 using namespace std;
+
+// struct Alias_Node {
+//     string alias;
+//     string command;
+//     Alias_Node *next;
+// };
+
 
 class Command {
     // TODO: Add your data members
@@ -114,11 +123,14 @@ public:
     void execute() override; // removed override hear, may be wrong to do so;
 };
 
-//in progress
+//tested
 class ChangeDirCommand : public BuiltInCommand {
     // TODO: Add your data members public:
 private:
     char* path;
+    char** last_dir_pointer;
+    bool valid_command;
+
 public:
     ChangeDirCommand(const char *cmd_line, char **plastPwd);
 
@@ -128,7 +140,7 @@ public:
     void execute() override;
 };
 
-//untested
+//tested
 class GetCurrDirCommand : public BuiltInCommand {
 public:
     GetCurrDirCommand(const char *cmd_line);
@@ -139,7 +151,7 @@ public:
     void execute() override;
 };
 
-//untested
+//tested
 class ShowPidCommand : public BuiltInCommand {
 public:
     ShowPidCommand(const char *cmd_line);
@@ -232,7 +244,10 @@ public:
     void execute() override;
 };
 
+//tested
 class AliasCommand : public BuiltInCommand {
+private:
+    const char* cmd_line;
 public:
     AliasCommand(const char *cmd_line);
 
@@ -242,7 +257,23 @@ public:
     void execute() override;
 };
 
+//tested
+class AliassedCommand : public BuiltInCommand {
+    const char* cmd_line;
+    string command;
+public:
+    AliassedCommand(const char *cmd_line, string command);
+
+    virtual ~AliassedCommand() {
+    }
+
+    void execute() override;
+};
+
+//tested
 class UnAliasCommand : public BuiltInCommand {
+private:
+    const char* cmd_line;
 public:
     UnAliasCommand(const char *cmd_line);
 
@@ -277,8 +308,8 @@ private:
     // TODO: Add your data members
     SmallShell();
     string text_prompt;
-
-    //char* last_dir;
+    char* last_dir;
+    vector<tuple<string, string, string>> alias_list;
 
 public:
     Command *CreateCommand(const char *cmd_line);
@@ -298,9 +329,23 @@ public:
 
     // TODO: add extra methods as needed
 
-    string getTextPrompt();
+    string get_text_prompt();
 
     void change_prompt(string str = "smash> ");
+
+    char* get_last_dir();
+
+    void set_last_dir(char* str);
+
+    vector<tuple<string, string, string>> get_alias_list();
+
+    void add_alias(string alias, string command, string cmd_line);
+
+    bool remove_alias(string alias);
 };
+
+
+string replace_first_word(const char* cmd_line, string command);
+
 
 #endif //SMASH_COMMAND_H_
