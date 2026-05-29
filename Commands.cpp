@@ -95,20 +95,40 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
+    // For example:
+    /*
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
-    if (firstWord.compare("chprompt") == 0) {
-        return new ChangePromptCommand(cmd_line);
-    }
-    if (firstWord.compare("showpid") == 0) {
-        return new ShowPidCommand(cmd_line);
-    }
     if (firstWord.compare("pwd") == 0) {
-        return new GetCurrDirCommand(cmd_line);
+      return new GetCurrDirCommand(cmd_line);
+    }
+    else if (firstWord.compare("showpid") == 0) {
+      return new ShowPidCommand(cmd_line);
+    }
+    else if ...
+    .....
+    else {
+      return new ExternalCommand(cmd_line);
+    }
+    */
+
+    char *filtered_line = strdup(cmd_line); //is this good? idk
+    if (_isBackgroundComamnd(cmd_line)) _removeBackgroundSign(filtered_line);
+    string cmd_s = _trim(string(filtered_line));
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+
+    if (firstWord.compare("chprompt") == 0) {
+        return new ChangePromptCommand(filtered_line);
+    }
+    else if (firstWord.compare("showpid") == 0) {
+        return new ShowPidCommand(filtered_line);
+    }
+    else if (firstWord.compare("pwd") == 0) {
+        return new GetCurrDirCommand(filtered_line);
     }
     if (firstWord.compare("cd") == 0) {
-        return new ChangeDirCommand(cmd_line, &getInstance().last_dir);
+        return new ChangeDirCommand(filtered_line, &getInstance().last_dir);
     }
     // if (firstWord.compare("jobs") == 0) {
     //     return new JobsCommand(cmd_line, jobs);
@@ -123,20 +143,20 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     //     return new KillCommand(cmd_line, jobs);
     // }
     if (firstWord.compare("alias") == 0) {
-        return new AliasCommand(cmd_line);
+        return new AliasCommand(filtered_line);
     }
     if (firstWord.compare("unalias") == 0) {
-        return new UnAliasCommand(cmd_line);
+        return new UnAliasCommand(filtered_line);
     }
     if (firstWord.compare("unsetenv") == 0) {
         return new UnSetEnvCommand(cmd_line);
     }
     if (firstWord.compare("sysinfo") == 0) {
-        return new SysInfoCommand(cmd_line);
+        return new SysInfoCommand(filtered_line);
     }
     for (auto i : getInstance().get_alias_list()) {
         if (get<0>(i) == string(firstWord)) {
-            return new AliassedCommand(cmd_line, get<1>(i));
+            return new AliassedCommand(filtered_line, get<1>(i));
         }
     }
 
@@ -345,10 +365,30 @@ Command::Command(const char* cmd_line) {
 BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
+    is_background = _isBackgroundComamnd(cmd_line);
+
+    char *filtered_line = strdup(cmd_line); //is this good? idk
+    if (is_background) _removeBackgroundSign(filtered_line);
+
+    char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
+    _parseCommandLine(filtered_line, aug);
+    int i = 0;
+    while (aug[i] != NULL) {
+        args.push_back(aug[i]);
+        i ++;
+    }
     // store cmd_line if needed later
 }
 
 void ExternalCommand::execute() {
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        setpgrp();
+        execvp(args[0], args.data());
+    } else if (pid > 0) {
+        if (!is_background) waitpid(pid, nullptr, 0);
+    }
     // your implementation or leave empty for now
 }
 
