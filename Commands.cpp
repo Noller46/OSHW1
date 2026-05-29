@@ -7,10 +7,11 @@
 #include <iomanip>
 #include "Commands.h"
 #include <cstring>
-#include <bits/regex.h>
+//#include <bits/regex.h>
+#include <regex>
 
 #include <tuple>
-#include <memory>
+//#include <memory>
 
 using namespace std;
 
@@ -94,6 +95,7 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
+    //cout << "create command: " << cmd_line << endl;
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
@@ -113,8 +115,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         return new AliasCommand(cmd_line);
     }
     for (auto i : getInstance().get_alias_list()) {
+        //cout << "alias: " << get<0>(i) << ", command: " << get<0>(i) << ", cmd_line: "<< get<0>(i) << endl;
         if (get<0>(i) == string(firstWord)) {
-            return new AliassedCommand(cmd_line, get<2>(i));
+            //cout << "//1//" << endl;
+            return new AliassedCommand(cmd_line, get<1>(i));
         }
     }
 
@@ -148,7 +152,13 @@ void SmallShell::set_last_dir(char* str) {
 }
 
 void SmallShell::add_alias(string alias, string command, string cmd_line) {
+    tuple<string, string, string> temp(alias, command, cmd_line);
+    //cout << "add alias function:::: 0: " << get<0>(temp) << ", 1: " << get<1>(temp) << ", 2: " << get<2>(temp) << endl;
     alias_list.push_back(tuple<string, string, string>(alias, command, cmd_line));
+}
+
+vector<tuple<string, string, string>> SmallShell::get_alias_list() {
+    return alias_list;
 }
 
 
@@ -212,29 +222,33 @@ void ChangeDirCommand::execute() {
 AliasCommand::AliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
 
 void AliasCommand::execute() {
-    char** args = new char*[COMMAND_MAX_ARGS];
-    int size = _parseCommandLine(cmd_line, args);
+    //char** args = new char*[COMMAND_MAX_ARGS];
+    //int size = _parseCommandLine(cmd_line, args);
+    string stripped_input = _trim(std::string(cmd_line));
 
-    if (size > 2) {
-        cout << "smash error: alias: invalid alias format" << endl;
-    }
-    else if (size == 1) {
+    // if (size > 2) {
+    //     cout << "smash error: alias: invalid alias format" << endl;
+    // }
+    if (stripped_input == "alias") {
+        cout << endl;
         for (auto i : SmallShell::getInstance().get_alias_list()) {
             cout << get<2>(i) << endl << endl;
         }
     }
     else {
         regex pattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
-        if (regex_match(cmd_line, pattern)) {
-            string temp = string(args[1]);
-            size_t index = temp.find('=');
+        if (regex_match(string(cmd_line), pattern)) {
+            string temp = string(stripped_input.substr(6)); // start change hear and it should be similar
+            //cout << "ADDCOMMAND,,,,, temp: " << temp;
 
-            if (index != string::npos) { // probably not necessary
-                // need to check if already exits and such
-                string alias = temp.substr(0, index);
-                string command = temp.substr(index + 1);
-                SmallShell::getInstance().add_alias(alias,command,args[1]);
-            }
+            size_t index = temp.find('=');
+            size_t before_equal_sign = temp.find('\'', index);
+            size_t after_equal_sign = temp.find('\'', before_equal_sign + 1);
+
+            string alias = temp.substr(0, index);
+            string command = temp.substr(before_equal_sign + 1, after_equal_sign - before_equal_sign - 1);
+            SmallShell::getInstance().add_alias(alias,command,stripped_input.substr(6));
+
         }
         else {
             cout << "smash error: alias: invalid alias format" << endl;
@@ -242,11 +256,45 @@ void AliasCommand::execute() {
     }
 }
 
+
+// void AliasCommand::execute() {
+//     std::string line = _trim(std::string(cmd_line));
+//
+//     if (line == "alias") {
+//         for (const auto& i : SmallShell::getInstance().get_alias_list()) {
+//             std::cout << std::get<2>(i) << std::endl;
+//         }
+//         return;
+//     }
+//
+//     std::regex pattern(R"(^alias [a-zA-Z0-9_]+='[^']*'$)");
+//     if (!std::regex_match(line, pattern)) {
+//         std::cout << "smash error: alias: invalid alias format" << std::endl;
+//         return;
+//     }
+//
+//     std::string rest = line.substr(6); // remove "alias "
+//     size_t eq = rest.find('=');
+//
+//     std::string alias = rest.substr(0, eq);
+//     std::string command = rest.substr(eq + 1);  // includes the quotes
+//
+//     // remove surrounding single quotes
+//     if (command.size() >= 2 && command.front() == '\'' && command.back() == '\'') {
+//         command = command.substr(1, command.size() - 2);
+//     }
+//
+//     SmallShell::getInstance().add_alias(alias, command, line);
+// }
+
+
 AliassedCommand::AliassedCommand(const char *cmd_line, string command) : BuiltInCommand(cmd_line),
 cmd_line(cmd_line), command(command) {}
 
 void AliassedCommand::execute() {
+    //cout << "AliassedCommand. cmd_line:" << cmd_line << ", command: " << command;
     string temp = replace_first_word(cmd_line, command);
+    //cout << ", temp: " << temp << endl;
     Command* cmd = SmallShell::getInstance().CreateCommand(temp.c_str());
     cmd->execute();
 }
