@@ -4,11 +4,20 @@
 
 #include <vector>
 #include <cstring>
+//#include <iostream>
+#include <memory>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
 using namespace std;
+
+// struct Alias_Node {
+//     string alias;
+//     string command;
+//     Alias_Node *next;
+// };
+
 
 class Command {
     // TODO: Add your data members
@@ -111,7 +120,7 @@ public:
     void execute() override; // removed override hear, may be wrong to do so;
 };
 
-//in progress
+//tested
 class ChangeDirCommand : public BuiltInCommand {
     // TODO: Add your data members public:
 private:
@@ -232,11 +241,26 @@ public:
     void execute() override;
 };
 
+//in progress
 class AliasCommand : public BuiltInCommand {
+private:
+    const char* cmd_line;
 public:
     AliasCommand(const char *cmd_line);
 
     virtual ~AliasCommand() {
+    }
+
+    void execute() override;
+};
+
+class AliassedCommand : public BuiltInCommand {
+    const char* cmd_line;
+    string command;
+public:
+    AliassedCommand(const char *cmd_line, string command);
+
+    virtual ~AliassedCommand() {
     }
 
     void execute() override;
@@ -278,6 +302,8 @@ private:
     SmallShell();
     string text_prompt;
     char* last_dir;
+    //Alias_Node alias_list;
+    vector<tuple<string, string, string>> alias_list;
 
 public:
     Command *CreateCommand(const char *cmd_line);
@@ -304,6 +330,14 @@ public:
     char* get_last_dir();
 
     void set_last_dir(char* str);
+
+    vector<tuple<string, string, string>> get_alias_list();
+
+    void add_alias(string alias, string command, string cmd_line);
 };
+
+
+string replace_first_word(const char* cmd_line, string command);
+
 
 #endif //SMASH_COMMAND_H_

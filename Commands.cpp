@@ -7,6 +7,10 @@
 #include <iomanip>
 #include "Commands.h"
 #include <cstring>
+#include <bits/regex.h>
+
+#include <tuple>
+#include <memory>
 
 using namespace std;
 
@@ -90,51 +94,37 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    // For example:
-    /*
-    string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
-    if (firstWord.compare("pwd") == 0) {
-      return new GetCurrDirCommand(cmd_line);
-    }
-    else if (firstWord.compare("showpid") == 0) {
-      return new ShowPidCommand(cmd_line);
-    }
-    else if ...
-    .....
-    else {
-      return new ExternalCommand(cmd_line);
-    }
-    */
-
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
     if (firstWord.compare("chprompt") == 0) {
         return new ChangePromptCommand(cmd_line);
     }
-    else if (firstWord.compare("showpid") == 0) {
+    if (firstWord.compare("showpid") == 0) {
         return new ShowPidCommand(cmd_line);
     }
-    else if (firstWord.compare("pwd") == 0) {
+    if (firstWord.compare("pwd") == 0) {
         return new GetCurrDirCommand(cmd_line);
     }
-    else if (firstWord.compare("cd") == 0) {
+    if (firstWord.compare("cd") == 0) {
         return new ChangeDirCommand(cmd_line, &getInstance().last_dir);
     }
-    else {
-        return new ExternalCommand(cmd_line);
+    if (firstWord.compare("alias") == 0) {
+        return new AliasCommand(cmd_line);
     }
+    for (auto i : getInstance().get_alias_list()) {
+        if (get<0>(i) == string(firstWord)) {
+            return new AliassedCommand(cmd_line, get<2>(i));
+        }
+    }
+
+    return new ExternalCommand(cmd_line);
 
     return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
-    // for example:
-    // Command* cmd = CreateCommand(cmd_line);
-    // cmd->execute();
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 
     Command* cmd = CreateCommand(cmd_line);
@@ -157,6 +147,12 @@ void SmallShell::set_last_dir(char* str) {
     getInstance().last_dir = str;
 }
 
+void SmallShell::add_alias(string alias, string command, string cmd_line) {
+    alias_list.push_back(tuple<string, string, string>(alias, command, cmd_line));
+}
+
+
+
 ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
     char** args = new char*[COMMAND_MAX_ARGS];
     int size = _parseCommandLine(cmd_line, args);
@@ -172,11 +168,11 @@ void ChangePromptCommand::execute() {
     SmallShell::getInstance().change_prompt(this->prompt);
 }
 
+ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
+
 void ShowPidCommand::execute() {
     cout << "smash pid is " << getpid() << endl; // may need to change cout to the terminal
 }
-
-ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void GetCurrDirCommand::execute() {
     char* path = getcwd(NULL, 0);
@@ -198,7 +194,6 @@ ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
         if (path[0] == '-' && path[1] == '\0') {
             if (*last_dir_pointer != nullptr) {
                 path = *last_dir_pointer;
-                //cout << path;
             }
             else {
                 cout << "smash error: cd: OLDPWD not set" << endl;
@@ -214,6 +209,47 @@ void ChangeDirCommand::execute() {
     }
 }
 
+AliasCommand::AliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
+
+void AliasCommand::execute() {
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int size = _parseCommandLine(cmd_line, args);
+
+    if (size > 2) {
+        cout << "smash error: alias: invalid alias format" << endl;
+    }
+    else if (size == 1) {
+        for (auto i : SmallShell::getInstance().get_alias_list()) {
+            cout << get<2>(i) << endl << endl;
+        }
+    }
+    else {
+        regex pattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
+        if (regex_match(cmd_line, pattern)) {
+            string temp = string(args[1]);
+            size_t index = temp.find('=');
+
+            if (index != string::npos) { // probably not necessary
+                // need to check if already exits and such
+                string alias = temp.substr(0, index);
+                string command = temp.substr(index + 1);
+                SmallShell::getInstance().add_alias(alias,command,args[1]);
+            }
+        }
+        else {
+            cout << "smash error: alias: invalid alias format" << endl;
+        }
+    }
+}
+
+AliassedCommand::AliassedCommand(const char *cmd_line, string command) : BuiltInCommand(cmd_line),
+cmd_line(cmd_line), command(command) {}
+
+void AliassedCommand::execute() {
+    string temp = replace_first_word(cmd_line, command);
+    Command* cmd = SmallShell::getInstance().CreateCommand(temp.c_str());
+    cmd->execute();
+}
 
 
 Command::Command(const char* cmd_line) {
@@ -221,8 +257,7 @@ Command::Command(const char* cmd_line) {
 }
 
 // add to Commands.cpp
-BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {
-}
+BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     // store cmd_line if needed later
@@ -230,4 +265,18 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
 
 void ExternalCommand::execute() {
     // your implementation or leave empty for now
+}
+
+
+
+string replace_first_word(const char* cmd_line, string command) {
+    string str(cmd_line);
+    size_t index = str.find(' ');
+
+    if (index == string::npos) {
+        return command;
+    }
+
+    str.replace(0, index, command);
+    return str;
 }
