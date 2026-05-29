@@ -237,14 +237,20 @@ void AliasCommand::execute() {
     else {
         regex pattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
         if (regex_match(string(cmd_line), pattern)) {
-            string temp = string(stripped_input.substr(6)); // start change hear and it should be similar
-
+            string temp = string(stripped_input.substr(6));
             size_t index = temp.find('=');
             size_t before_equal_sign = temp.find('\'', index);
             size_t after_equal_sign = temp.find('\'', before_equal_sign + 1);
 
             string alias = temp.substr(0, index);
             string command = temp.substr(before_equal_sign + 1, after_equal_sign - before_equal_sign - 1);
+
+            if (alias == "chprompt" || alias == "showpid" || alias == "pwd" || alias == "cd" || alias == "jobs" ||
+                alias == "fg" || alias == "quit" || alias == "kill" || alias == "alias" || alias == "unalias" ||
+                alias == "unsetenv " || alias == "sysinfo" || alias == "du" || alias == "whoami" ||
+                alias == "usbinfo ") { // may need to add more
+                cout << "smash error: alias: <" << alias << "> already exists or is a reserved command" << endl;
+            }
 
             for (auto i : SmallShell::getInstance().get_alias_list()) {
                 if (get<0>(i) == alias) {
