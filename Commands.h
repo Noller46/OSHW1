@@ -35,6 +35,7 @@ public:
 class ExternalCommand : public Command {
 private:
     std::vector<char*> args;
+    bool is_background;
 public:
     ExternalCommand(const char *cmd_line);
 

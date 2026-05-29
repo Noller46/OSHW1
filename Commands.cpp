@@ -109,19 +109,21 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     */
 
-    string cmd_s = _trim(string(cmd_line));
+    char *filtered_line = strdup(cmd_line); //is this good? idk
+    if (_isBackgroundComamnd(cmd_line)) _removeBackgroundSign(filtered_line);
+    string cmd_s = _trim(string(filtered_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+
     if (firstWord.compare("chprompt") == 0) {
-        return new ChangePromptCommand(cmd_line);
+        return new ChangePromptCommand(filtered_line);
     }
     else if (firstWord.compare("showpid") == 0) {
-        return new ShowPidCommand(cmd_line);
+        return new ShowPidCommand(filtered_line);
     }
     else if (firstWord.compare("pwd") == 0) {
-        return new GetCurrDirCommand(cmd_line);
+        return new GetCurrDirCommand(filtered_line);
     }
     else {
-        ////asdfghjkl;jhgfdsdfghjkl
         return new ExternalCommand(cmd_line);
     }
 
@@ -186,8 +188,13 @@ BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {
 }
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
+    is_background = _isBackgroundComamnd(cmd_line);
+
+    char *filtered_line = strdup(cmd_line); //is this good? idk
+    if (is_background) _removeBackgroundSign(filtered_line);
+
     char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
-    _parseCommandLine(cmd_line, aug);
+    _parseCommandLine(filtered_line, aug);
     int i = 0;
     while (aug[i] != NULL) {
         args.push_back(aug[i]);
@@ -200,9 +207,10 @@ void ExternalCommand::execute() {
 
     pid_t pid = fork();
     if (pid == 0) {
+        setpgrp();
         execvp(args[0], args.data());
     } else if (pid > 0) {
-        wait(NULL);
+        if (!is_background) waitpid(pid, nullptr, 0);
     }
     // your implementation or leave empty for now
 }
