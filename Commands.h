@@ -302,7 +302,6 @@ private:
     SmallShell();
     string text_prompt;
     char* last_dir;
-    //Alias_Node alias_list;
     vector<tuple<string, string, string>> alias_list;
 
 public:
@@ -334,6 +333,8 @@ public:
     vector<tuple<string, string, string>> get_alias_list();
 
     void add_alias(string alias, string command, string cmd_line);
+
+    void remove_alias(string alias);
 };
 
 
