@@ -88,7 +88,7 @@ SmallShell::SmallShell() {
     // TODO: add your implementation
     text_prompt = "smash> ";
     last_dir = nullptr;
-    //init = new JobsList();
+    J_list = new JobsList();
     input_mode = 0;
 }
 
@@ -460,7 +460,9 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     // store cmd_line if needed later
 }
 
-JobsList::JobsList(){}
+JobsList::JobsList() {
+    init = new JobEntry();
+}
 
 void ExternalCommand::execute() {
     pid_t pid = fork();
@@ -475,27 +477,42 @@ void ExternalCommand::execute() {
         }
 
 
-        if (is_background) SmallShell::getInstance().add_job(my_name);
         setpgrp();
         execvp(args[0], args.data());
     } else if (pid > 0) {
         if (!is_background) {
-            //cout << "///4///" << endl;
             waitpid(pid, nullptr, 0);
-            //cout << "///5///" << endl;
+        } else {
+            if (is_background) SmallShell::getInstance().add_job(this);
         }
     }
     // your implementation or leave empty for now
 }
 
-void SmallShell::add_job(const char *cmd_line) {
-    //xhjklhgfd
+const char* Command::get_line() const {
+    return og_line;
 }
 
-void SmallShell::remove_job(const char *cmd_line) {
-    //dfhgjklhg
+const char *JobsList::JobEntry::get_line() {
+    return line;
 }
 
+void SmallShell::add_job(Command* com) {
+    J_list->addJob(com);
+}
+
+void JobsList::addJob(Command* com, bool baba) {
+    //JobEntry* J = new JobEntry(com, init);
+    new JobEntry(com, init);
+}
+
+void JobsList::printJobsList() {
+    JobEntry* trav = init->next;
+    while (string(trav->get_line()) != "aaaaa") {
+        cout << trav->get_line() << ":" << endl;
+        trav = trav->next;
+    }
+}
 
 
 string replace_first_word(const char* cmd_line, string command) {
@@ -510,7 +527,5 @@ string replace_first_word(const char* cmd_line, string command) {
     return str;
 }
 
-const char *Command::get_line() const {
-    return og_line;
-}
+
 
