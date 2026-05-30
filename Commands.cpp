@@ -84,12 +84,10 @@ void _removeBackgroundSign(char *cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-SmallShell::SmallShell() {
+SmallShell::SmallShell() : text_prompt("smash> "), last_dir(nullptr), input_mode(0) {
     // TODO: add your implementation
-    text_prompt = "smash> ";
-    last_dir = nullptr;
-    J_list = new JobsList();
     input_mode = 0;
+    J_list = new JobsList();
 }
 
 SmallShell::~SmallShell() {
@@ -101,33 +99,31 @@ SmallShell::~SmallShell() {
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
     // checks for I/O redirection
-    char** args = new char*[COMMAND_MAX_ARGS];
-    int size = _parseCommandLine(cmd_line, args);
     string stripped_input = _trim(string(cmd_line));
+    input = stripped_input;
 
-    for (int i = 1; i < size; ++i) {
-        string argument = args[i];
-        if (argument == ">") {
-            input_mode = 1;
-            size_t index = stripped_input.find(">");
-            size_t before_sign = stripped_input.find('\'', index);
-            size_t after_sign = stripped_input.find('\'', before_sign + 1);
+    size_t should_not_redirect  = stripped_input.find(">>>");
+    size_t redirect_append = stripped_input.find(">>");
+    size_t redirect  = stripped_input.find(">");
 
-            input = stripped_input.substr(0, index);
-            output = stripped_input.substr(before_sign + 1, after_sign - before_sign - 1);
-        }
-        else if (argument == ">>") {
-            input_mode = 2;
-            size_t index = stripped_input.find(">>");
-            size_t before_sign = stripped_input.find('\'', index);
-            size_t after_sign = stripped_input.find('\'', before_sign + 1);
-
-            input = stripped_input.substr(0, index);
-            output = stripped_input.substr(before_sign + 1, after_sign - before_sign - 1);
-        }
+    if (should_not_redirect != string::npos) {
+        redirect_append = string::npos;
+        redirect  = string::npos;
+    }
+    if (redirect_append != string::npos) { // this has to be checked first
+        input_mode = 2;
+        input  = _trim(stripped_input.substr(0, redirect_append));
+        output = _trim(stripped_input.substr(redirect_append + 2));
+    } else if (redirect != string::npos) {
+        input_mode = 1;
+        input  = _trim(stripped_input.substr(0, redirect));
+        output = _trim(stripped_input.substr(redirect + 1));
     }
 
     char *filtered_line = strdup(cmd_line); //is this good? idk
+    if (input_mode != 0) {
+        filtered_line = strdup(input.c_str());
+    }
     if (_isBackgroundComamnd(cmd_line)) _removeBackgroundSign(filtered_line);
     string cmd_s = _trim(string(filtered_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
@@ -174,7 +170,11 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         }
     }
 
-    return new ExternalCommand(cmd_line);
+    if (input_mode != 0) {
+        return new ExternalCommand(input.c_str());  // just the command part
+    } else {
+        return new ExternalCommand(cmd_line);
+    }
 
     return nullptr;
 }
@@ -182,7 +182,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     // Please note that you must fork smash process for some commands (e.g., external commands....)
-
+    input_mode = 0;
+    input = "";
+    output = "";
     Command* cmd = CreateCommand(cmd_line);
     cmd->execute();
 }
@@ -223,15 +225,19 @@ vector<tuple<string, string, string>> SmallShell::get_alias_list() {
 }
 
 int SmallShell::get_input_mode() {
-    return getInstance().input_mode;
+    return input_mode;
+}
+
+void SmallShell::set_input_mode(int mode) {
+    input_mode = mode;
 }
 
 string SmallShell::get_input() {
-    return getInstance().input;
+    return input;
 }
 
 string SmallShell::get_output() {
-    return getInstance().output;
+    return output;
 }
 
 
@@ -255,37 +261,67 @@ void ChangePromptCommand::execute() {
 ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void ShowPidCommand::execute() {
+    int original_output_channel = -1;
     if (SmallShell::getInstance().get_input_mode() == 1) {
+        original_output_channel = dup(1); // may be illegal
         close(1);
         open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // dup2(fd, 1);
+        // close(fd);
     }
     else if (SmallShell::getInstance().get_input_mode() == 2) {
+        original_output_channel = dup(1); // may be illegal
         close(1);
         open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // dup2(fd, 1);
+        // close(fd);
     }
 
     string str = "smash pid is " + to_string(getpid()) + "\n";
     write(1,str.c_str(),str.length());
+
+    if (original_output_channel != -1) {
+        dup2(original_output_channel, 1);
+        close(original_output_channel);
+    }
 }
 
 GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void GetCurrDirCommand::execute() {
-    //cout << "///1///" << endl;
+    int original_output_channel = -1;
     if (SmallShell::getInstance().get_input_mode() == 1) {
+        original_output_channel = dup(1); // may be illegal
         close(1);
         open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(),O_CREAT | O_TRUNC | O_RDWR, 0666);
+        // cerr << "fd=" << fd << endl;
+        // if (fd == -1) {
+        //     perror("open failed");
+        //     return;
+        // }
+        // dup2(fd, STDOUT_FILENO);
+        // close(fd);
     }
     else if (SmallShell::getInstance().get_input_mode() == 2) {
+        original_output_channel = dup(1); // may be illegal
         close(1);
         open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT | O_APPEND | O_RDWR, 0666);
+        // dup2(fd, 1);
+        // close(fd);
     }
-    //cout << "///2///" << endl;
 
     char* path = getcwd(NULL, 0);
     string str = string(path) + "\n";
     write(1,str.c_str(),str.length());
-    //cout << "///3///" << endl;
+
+    if (original_output_channel != -1) {
+        dup2(original_output_channel, 1);
+        close(original_output_channel);
+    }
 }
 
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
@@ -327,15 +363,23 @@ void ChangeDirCommand::execute() {
 AliasCommand::AliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
 
 void AliasCommand::execute() {
+    int original_output_channel = -1;
     if (SmallShell::getInstance().get_input_mode() == 1) {
+        original_output_channel = dup(1); // may be illegal
         close(1);
         open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-    }
-    else if (SmallShell::getInstance().get_input_mode() == 2) {
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // dup2(fd, 1);
+        // close(fd);
+    } else if (SmallShell::getInstance().get_input_mode() == 2) {
+        original_output_channel = dup(1); // may be illegal
         close(1);
         open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // dup2(fd, 1);
+        // close(fd);
     }
-    string stripped_input = _trim(string(cmd_line));
+    string stripped_input = _trim(string(SmallShell::getInstance().get_input()));
 
     if (stripped_input == "alias") {
         write(1,"\n",1);
@@ -343,8 +387,7 @@ void AliasCommand::execute() {
             string str = string(get<2>(i)) + "\n\n";
             write(1,str.c_str(),str.length());
         }
-    }
-    else {
+    } else {
         regex pattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
         if (regex_match(string(cmd_line), pattern)) {
             string temp = string(stripped_input.substr(6));
@@ -361,6 +404,7 @@ void AliasCommand::execute() {
                 alias == "usbinfo ") { // may need to add more
                 string str = "smash error: alias: " + string(alias) + " already exists or is a reserved command\n";
                 write(1,str.c_str(),str.length());
+                return;
             }
 
             for (auto i : SmallShell::getInstance().get_alias_list()) {
@@ -370,11 +414,14 @@ void AliasCommand::execute() {
             }
             SmallShell::getInstance().add_alias(alias,command,stripped_input.substr(6));
 
-        }
-        else {
+        } else {
             string str = "smash error: alias: invalid alias format\n";
             write(1,str.c_str(),str.length());
         }
+    }
+    if (original_output_channel != -1) {
+        dup2(original_output_channel, 1);
+        close(original_output_channel);
     }
 }
 
@@ -470,10 +517,16 @@ void ExternalCommand::execute() {
         if (SmallShell::getInstance().get_input_mode() == 1) {
             close(1);
             open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+            // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+            // dup2(fd, 1);
+            // close(fd);
         }
         else if (SmallShell::getInstance().get_input_mode() == 2) {
             close(1);
             open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+            // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+            // dup2(fd, 1);
+            // close(fd);
         }
 
 
@@ -483,7 +536,7 @@ void ExternalCommand::execute() {
         if (!is_background) {
             waitpid(pid, nullptr, 0);
         } else {
-            if (is_background) SmallShell::getInstance().add_job(this);
+            SmallShell::getInstance().add_job(this);
         }
     }
     // your implementation or leave empty for now
@@ -502,7 +555,6 @@ void SmallShell::add_job(Command* com) {
 }
 
 void JobsList::addJob(Command* com, bool baba) {
-    //JobEntry* J = new JobEntry(com, init);
     new JobEntry(com, init);
 }
 
