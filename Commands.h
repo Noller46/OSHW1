@@ -6,6 +6,7 @@
 #include <cstring>
 //#include <iostream>
 #include <memory>
+#include "Commands.h"
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -21,6 +22,7 @@ using namespace std;
 
 class Command {
     // TODO: Add your data members
+    const char * og_line;
 public:
     Command(const char *cmd_line);
 
@@ -31,6 +33,8 @@ public:
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
+
+    const char * get_line() const;
 };
 
 class BuiltInCommand : public Command {
@@ -165,6 +169,8 @@ public:
 
 //only after background
 class JobsList;
+class JobsEntry;
+
 
 //only after background
 class QuitCommand : public BuiltInCommand {
@@ -179,14 +185,16 @@ class QuitCommand : public BuiltInCommand {
 
 //only after background
 class JobsList {
+    JobsEntry* init;
 public:
     class JobEntry {
         // TODO: Add your data members
         const char * line;
+        pid_t pid;
         JobEntry* next;
         JobEntry* prev;
     public:
-        JobEntry(const char* line): line(line) {
+        JobEntry(Command* com): line(com->get_line()) {
             next = this;
             prev = this;
         }

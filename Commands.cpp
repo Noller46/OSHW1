@@ -352,8 +352,7 @@ void SysInfoCommand::execute() { // works somehow
 }
 
 
-Command::Command(const char* cmd_line) {
-    // store cmd_line if needed later
+Command::Command(const char* cmd_line): og_line(cmd_line) {
 }
 
 // add to Commands.cpp
@@ -417,3 +416,8 @@ string replace_first_word(const char* cmd_line, string command) {
     str.replace(0, index, command);
     return str;
 }
+
+const char *Command::get_line() const {
+    return og_line;
+}
+
