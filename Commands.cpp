@@ -85,7 +85,7 @@ SmallShell::SmallShell() {
     // TODO: add your implementation
     text_prompt = "smash> ";
     last_dir = nullptr;
-    init = new JobsList();
+    //init = new JobsList();
 }
 
 SmallShell::~SmallShell() {
@@ -149,9 +149,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("unalias") == 0) {
         return new UnAliasCommand(filtered_line);
     }
-    // if (firstWord.compare("unsetenv") == 0) {
-    //     return new UnSetEnvCommand(cmd_line);
-    // }
+    if (firstWord.compare("unsetenv") == 0) {
+        return new UnSetEnvCommand(cmd_line);
+    }
     // if (firstWord.compare("sysinfo") == 0) {
     //     return new SysInfoCommand(filtered_line);
     // }
@@ -229,32 +229,39 @@ void ChangePromptCommand::execute() {
 ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void ShowPidCommand::execute() {
-    cout << "smash pid is " << getpid() << endl; // may need to change cout to the terminal
-}
-
-void GetCurrDirCommand::execute() {
-    char* path = getcwd(NULL, 0);
-    cout << path << endl; // may need to change cout to the terminal
+    string str = "smash pid is " + to_string(getpid()) + "\n";
+    write(1,str.c_str(),str.length());
 }
 
 GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
+
+void GetCurrDirCommand::execute() {
+    char* path = getcwd(NULL, 0);
+    string str = string(path) + "\n";
+    write(1,str.c_str(),str.length());
+}
 
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
     BuiltInCommand(cmd_line), last_dir_pointer(plastPwd) {
     char** args = new char*[COMMAND_MAX_ARGS];
     int size = _parseCommandLine(cmd_line, args);
+    valid_command = false;
 
     if (size > 2) {
-        cout << "smash error: cd: too many arguments" << endl;
+        string str = "smash error: cd: too many arguments\n";
+        write(1,str.c_str(),str.length());
     }
     else if (size == 2) {
+        valid_command = true;
         path = args[1];
         if (path[0] == '-' && path[1] == '\0') {
             if (*last_dir_pointer != nullptr) {
                 path = *last_dir_pointer;
             }
             else {
-                cout << "smash error: cd: OLDPWD not set" << endl;
+                valid_command = false;
+                string str = "smash error: cd: OLDPWD not set\n";
+                write(1,str.c_str(),str.length());
             }
         }
     }
@@ -263,7 +270,10 @@ ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
 void ChangeDirCommand::execute() {
     if (valid_command) {
         SmallShell::getInstance().set_last_dir(getcwd(NULL, 0));
-        chdir(path); // if this fails, needs to send an error
+        if (chdir(path) == -1) {
+            string str = "some error message \n"; // needs to be redone
+            write(1,str.c_str(),str.length());
+        }
     }
 }
 
@@ -273,9 +283,10 @@ void AliasCommand::execute() {
     string stripped_input = _trim(string(cmd_line));
 
     if (stripped_input == "alias") {
-        cout << endl;
+        write(1,"\n",1);
         for (auto i : SmallShell::getInstance().get_alias_list()) {
-            cout << get<2>(i) << endl << endl;
+            string str = string(get<2>(i)) + "\n\n";
+            write(1,str.c_str(),str.length());
         }
     }
     else {
@@ -293,7 +304,8 @@ void AliasCommand::execute() {
                 alias == "fg" || alias == "quit" || alias == "kill" || alias == "alias" || alias == "unalias" ||
                 alias == "unsetenv " || alias == "sysinfo" || alias == "du" || alias == "whoami" ||
                 alias == "usbinfo ") { // may need to add more
-                cout << "smash error: alias: " << alias << " already exists or is a reserved command" << endl;
+                string str = "smash error: alias: " + string(alias) + " already exists or is a reserved command\n";
+                write(1,str.c_str(),str.length());
             }
 
             for (auto i : SmallShell::getInstance().get_alias_list()) {
@@ -305,7 +317,8 @@ void AliasCommand::execute() {
 
         }
         else {
-            cout << "smash error: alias: invalid alias format" << endl;
+            string str = "smash error: alias: invalid alias format\n";
+            write(1,str.c_str(),str.length());
         }
     }
 }
@@ -326,13 +339,16 @@ void UnAliasCommand::execute() {
     int size = _parseCommandLine(cmd_line, args);
 
     if (size == 1) {
-        cout << "smash error: unalias: not enough arguments" << endl;
+        string str = "smash error: unalias: not enough arguments\n";
+        write(1,str.c_str(),str.length());
+
     }
     else {
         for (int i = 1; i < size; ++i) {
             char* name = args[i];
             if (!SmallShell::getInstance().remove_alias(name)) {
-                cout << "smash error: unalias: " << name << " alias does not exist" << endl;
+                string str = "smash error: unalias: " + string(name) + " alias does not exist\n";
+                write(1,str.c_str(),str.length());
                 return;
             }
         }
@@ -342,19 +358,21 @@ void UnAliasCommand::execute() {
 UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void UnSetEnvCommand::execute() {
-    
+
 }
 
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void SysInfoCommand::execute() { // works somehow
-    struct utsname info;
-    uname(&info);
-
-    cout << "System: " << info.sysname << endl;
-    cout << "Hostname: " << info.nodename << endl;
-    cout << "Kernel: " << info.release << endl;
-    cout << "Architecture: " << info.machine << endl;
+    // struct utsname info;
+    // uname(&info);
+    //
+    // cout << "System: " << info.sysname << endl;
+    // cout << "Hostname: " << info.nodename << endl;
+    // cout << "Kernel: " << info.release << endl;
+    // cout << "Architecture: " << info.machine << endl;
+    // string str = "smash error: unalias: " + string(name) + " alias does not exist\n";
+    // write(1,str.c_str(),str.length());
 }
 
 
