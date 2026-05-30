@@ -338,6 +338,9 @@ private:
     char* last_dir;
     vector<tuple<string, string, string>> alias_list;
     JobsList* init;
+    int input_mode;
+    string input;
+    string output;
 
 
 public:
@@ -375,6 +378,12 @@ public:
     void add_job(const char *cmd_line);
 
     void remove_job(const char *cmd_line);
+
+    int get_input_mode();
+
+    string get_input();
+
+    string get_output();
 };
 
 

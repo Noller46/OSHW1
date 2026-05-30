@@ -12,6 +12,9 @@
 #include <regex>
 #include <tuple>
 #include <sys/utsname.h> // might be illegal
+#include <fcntl.h> // might be illegal
+#include <sys/types.h> // shown in power point, may not be necessary
+#include <signal.h> // shown in power point, may not be necessary
 
 using namespace std;
 
@@ -85,7 +88,8 @@ SmallShell::SmallShell() {
     // TODO: add your implementation
     text_prompt = "smash> ";
     last_dir = nullptr;
-    init = new JobsList();
+    //init = new JobsList();
+    input_mode = 0;
 }
 
 SmallShell::~SmallShell() {
@@ -96,23 +100,32 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    // For example:
-    /*
-    string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    // checks for I/O redirection
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int size = _parseCommandLine(cmd_line, args);
+    string stripped_input = _trim(string(cmd_line));
 
-    if (firstWord.compare("pwd") == 0) {
-      return new GetCurrDirCommand(cmd_line);
+    for (int i = 1; i < size; ++i) {
+        string argument = args[i];
+        if (argument == ">") {
+            input_mode = 1;
+            size_t index = stripped_input.find(">");
+            size_t before_sign = stripped_input.find('\'', index);
+            size_t after_sign = stripped_input.find('\'', before_sign + 1);
+
+            input = stripped_input.substr(0, index);
+            output = stripped_input.substr(before_sign + 1, after_sign - before_sign - 1);
+        }
+        else if (argument == ">>") {
+            input_mode = 2;
+            size_t index = stripped_input.find(">>");
+            size_t before_sign = stripped_input.find('\'', index);
+            size_t after_sign = stripped_input.find('\'', before_sign + 1);
+
+            input = stripped_input.substr(0, index);
+            output = stripped_input.substr(before_sign + 1, after_sign - before_sign - 1);
+        }
     }
-    else if (firstWord.compare("showpid") == 0) {
-      return new ShowPidCommand(cmd_line);
-    }
-    else if ...
-    .....
-    else {
-      return new ExternalCommand(cmd_line);
-    }
-    */
 
     char *filtered_line = strdup(cmd_line); //is this good? idk
     if (_isBackgroundComamnd(cmd_line)) _removeBackgroundSign(filtered_line);
@@ -122,10 +135,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("chprompt") == 0) {
         return new ChangePromptCommand(filtered_line);
     }
-    else if (firstWord.compare("showpid") == 0) {
+    if (firstWord.compare("showpid") == 0) {
         return new ShowPidCommand(filtered_line);
     }
-    else if (firstWord.compare("pwd") == 0) {
+    if (firstWord.compare("pwd") == 0) {
         return new GetCurrDirCommand(filtered_line);
     }
     if (firstWord.compare("cd") == 0) {
@@ -152,9 +165,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     // if (firstWord.compare("unsetenv") == 0) {
     //     return new UnSetEnvCommand(cmd_line);
     // }
-    if (firstWord.compare("sysinfo") == 0) {
-        return new SysInfoCommand(filtered_line);
-    }
+    // if (firstWord.compare("sysinfo") == 0) {
+    //     return new SysInfoCommand(filtered_line);
+    // }
     for (auto i : getInstance().get_alias_list()) {
         if (get<0>(i) == string(firstWord)) {
             return new AliassedCommand(filtered_line, get<1>(i));
@@ -209,6 +222,19 @@ vector<tuple<string, string, string>> SmallShell::get_alias_list() {
     return alias_list;
 }
 
+int SmallShell::get_input_mode() {
+    return getInstance().input_mode;
+}
+
+string SmallShell::get_input() {
+    return getInstance().input;
+}
+
+string SmallShell::get_output() {
+    return getInstance().output;
+}
+
+
 
 
 ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
@@ -229,32 +255,60 @@ void ChangePromptCommand::execute() {
 ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void ShowPidCommand::execute() {
-    cout << "smash pid is " << getpid() << endl; // may need to change cout to the terminal
-}
+    if (SmallShell::getInstance().get_input_mode() == 1) {
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+    }
+    else if (SmallShell::getInstance().get_input_mode() == 2) {
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+    }
 
-void GetCurrDirCommand::execute() {
-    char* path = getcwd(NULL, 0);
-    cout << path << endl; // may need to change cout to the terminal
+    string str = "smash pid is " + to_string(getpid()) + "\n";
+    write(1,str.c_str(),str.length());
 }
 
 GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
+
+void GetCurrDirCommand::execute() {
+    //cout << "///1///" << endl;
+    if (SmallShell::getInstance().get_input_mode() == 1) {
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+    }
+    else if (SmallShell::getInstance().get_input_mode() == 2) {
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+    }
+    //cout << "///2///" << endl;
+
+    char* path = getcwd(NULL, 0);
+    string str = string(path) + "\n";
+    write(1,str.c_str(),str.length());
+    //cout << "///3///" << endl;
+}
 
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
     BuiltInCommand(cmd_line), last_dir_pointer(plastPwd) {
     char** args = new char*[COMMAND_MAX_ARGS];
     int size = _parseCommandLine(cmd_line, args);
+    valid_command = false;
 
     if (size > 2) {
-        cout << "smash error: cd: too many arguments" << endl;
+        string str = "smash error: cd: too many arguments\n";
+        write(1,str.c_str(),str.length());
     }
     else if (size == 2) {
+        valid_command = true;
         path = args[1];
         if (path[0] == '-' && path[1] == '\0') {
             if (*last_dir_pointer != nullptr) {
                 path = *last_dir_pointer;
             }
             else {
-                cout << "smash error: cd: OLDPWD not set" << endl;
+                valid_command = false;
+                string str = "smash error: cd: OLDPWD not set\n";
+                write(1,str.c_str(),str.length());
             }
         }
     }
@@ -263,19 +317,31 @@ ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
 void ChangeDirCommand::execute() {
     if (valid_command) {
         SmallShell::getInstance().set_last_dir(getcwd(NULL, 0));
-        chdir(path); // if this fails, needs to send an error
+        if (chdir(path) == -1) {
+            string str = "some error message \n"; // needs to be redone
+            write(2,str.c_str(),str.length());
+        }
     }
 }
 
 AliasCommand::AliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
 
 void AliasCommand::execute() {
+    if (SmallShell::getInstance().get_input_mode() == 1) {
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+    }
+    else if (SmallShell::getInstance().get_input_mode() == 2) {
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+    }
     string stripped_input = _trim(string(cmd_line));
 
     if (stripped_input == "alias") {
-        cout << endl;
+        write(1,"\n",1);
         for (auto i : SmallShell::getInstance().get_alias_list()) {
-            cout << get<2>(i) << endl << endl;
+            string str = string(get<2>(i)) + "\n\n";
+            write(1,str.c_str(),str.length());
         }
     }
     else {
@@ -293,7 +359,8 @@ void AliasCommand::execute() {
                 alias == "fg" || alias == "quit" || alias == "kill" || alias == "alias" || alias == "unalias" ||
                 alias == "unsetenv " || alias == "sysinfo" || alias == "du" || alias == "whoami" ||
                 alias == "usbinfo ") { // may need to add more
-                cout << "smash error: alias: " << alias << " already exists or is a reserved command" << endl;
+                string str = "smash error: alias: " + string(alias) + " already exists or is a reserved command\n";
+                write(1,str.c_str(),str.length());
             }
 
             for (auto i : SmallShell::getInstance().get_alias_list()) {
@@ -305,7 +372,8 @@ void AliasCommand::execute() {
 
         }
         else {
-            cout << "smash error: alias: invalid alias format" << endl;
+            string str = "smash error: alias: invalid alias format\n";
+            write(1,str.c_str(),str.length());
         }
     }
 }
@@ -326,29 +394,40 @@ void UnAliasCommand::execute() {
     int size = _parseCommandLine(cmd_line, args);
 
     if (size == 1) {
-        cout << "smash error: unalias: not enough arguments" << endl;
+        string str = "smash error: unalias: not enough arguments\n";
+        write(1,str.c_str(),str.length());
+
     }
     else {
         for (int i = 1; i < size; ++i) {
             char* name = args[i];
             if (!SmallShell::getInstance().remove_alias(name)) {
-                cout << "smash error: unalias: " << name << " alias does not exist" << endl;
+                string str = "smash error: unalias: " + string(name) + " alias does not exist\n";
+                write(1,str.c_str(),str.length());
                 return;
             }
         }
     }
 }
 
+UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+void UnSetEnvCommand::execute() {
+
+}
+
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void SysInfoCommand::execute() { // works somehow
-    struct utsname info;
-    uname(&info);
-
-    cout << "System: " << info.sysname << endl;
-    cout << "Hostname: " << info.nodename << endl;
-    cout << "Kernel: " << info.release << endl;
-    cout << "Architecture: " << info.machine << endl;
+    // struct utsname info;
+    // uname(&info);
+    //
+    // cout << "System: " << info.sysname << endl;
+    // cout << "Hostname: " << info.nodename << endl;
+    // cout << "Kernel: " << info.release << endl;
+    // cout << "Architecture: " << info.machine << endl;
+    // string str = "smash error: unalias: " + string(name) + " alias does not exist\n";
+    // write(1,str.c_str(),str.length());
 }
 
 
@@ -380,17 +459,31 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     }
     // store cmd_line if needed later
 }
+
 JobsList::JobsList(){}
 
 void ExternalCommand::execute() {
-
     pid_t pid = fork();
     if (pid == 0) {
+        if (SmallShell::getInstance().get_input_mode() == 1) {
+            close(1);
+            open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        }
+        else if (SmallShell::getInstance().get_input_mode() == 2) {
+            close(1);
+            open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        }
+
+
         if (is_background) SmallShell::getInstance().add_job(my_name);
         setpgrp();
         execvp(args[0], args.data());
     } else if (pid > 0) {
-        if (!is_background) waitpid(pid, nullptr, 0);
+        if (!is_background) {
+            //cout << "///4///" << endl;
+            waitpid(pid, nullptr, 0);
+            //cout << "///5///" << endl;
+        }
     }
     // your implementation or leave empty for now
 }
