@@ -85,6 +85,7 @@ SmallShell::SmallShell() {
     // TODO: add your implementation
     text_prompt = "smash> ";
     last_dir = nullptr;
+    init = new JobsList();
 }
 
 SmallShell::~SmallShell() {
@@ -130,9 +131,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("cd") == 0) {
         return new ChangeDirCommand(filtered_line, &getInstance().last_dir);
     }
-    // if (firstWord.compare("jobs") == 0) {
-    //     return new JobsCommand(cmd_line, jobs);
-    // }
+    //if (firstWord.compare("jobs") == 0) {
+    //    return new JobsCommand(cmd_line, jobs);
+    //}
     // if (firstWord.compare("fg") == 0) {
     //     return new ForegroundCommand(cmd_line, jobs);
     // }
@@ -366,6 +367,7 @@ BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     is_background = _isBackgroundComamnd(cmd_line);
+    my_name = strdup(cmd_line);
 
     char *filtered_line = strdup(cmd_line); //is this good? idk
     if (is_background) _removeBackgroundSign(filtered_line);
@@ -373,23 +375,39 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
     _parseCommandLine(filtered_line, aug);
     int i = 0;
-    while (aug[i] != NULL) {
-        args.push_back(aug[i]);
-        i ++;
+    if (strchr(cmd_line, '*') || strchr(cmd_line, '?')) {
+        args.push_back(strdup("bash"));
+        args.push_back(strdup("-c"));
+        args.push_back(strdup(cmd_line));
+    } else {
+        while (aug[i] != NULL) {
+            args.push_back(aug[i]);
+            i ++;
+        }
     }
     // store cmd_line if needed later
 }
+JobsList::JobsList(){}
 
 void ExternalCommand::execute() {
 
     pid_t pid = fork();
     if (pid == 0) {
+        if (is_background) SmallShell::getInstance().add_job(my_name);
         setpgrp();
         execvp(args[0], args.data());
     } else if (pid > 0) {
         if (!is_background) waitpid(pid, nullptr, 0);
     }
     // your implementation or leave empty for now
+}
+
+void SmallShell::add_job(const char *cmd_line) {
+    //xhjklhgfd
+}
+
+void SmallShell::remove_job(const char *cmd_line) {
+    //dfhgjklhg
 }
 
 

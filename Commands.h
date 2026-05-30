@@ -45,6 +45,7 @@ class ExternalCommand : public Command {
 private:
     std::vector<char*> args;
     bool is_background;
+    char * my_name;
 public:
     ExternalCommand(const char *cmd_line);
 
@@ -181,6 +182,23 @@ class JobsList {
 public:
     class JobEntry {
         // TODO: Add your data members
+        const char * line;
+        JobEntry* next;
+        JobEntry* prev;
+    public:
+        JobEntry(const char* line): line(line) {
+            next = this;
+            prev = this;
+        }
+        JobEntry(const char* line, JobEntry* next): line(line), next(next) {
+            next->prev->next = this;
+            next->prev = this;
+        }
+        ~JobEntry() {
+            next->prev = prev;
+            prev->next = next;
+            delete line;
+        }
     };
 
     // TODO: Add your data members
@@ -303,6 +321,7 @@ public:
     void execute() override;
 };
 
+
 class SmallShell {
 private:
     // TODO: Add your data members
@@ -310,6 +329,8 @@ private:
     string text_prompt;
     char* last_dir;
     vector<tuple<string, string, string>> alias_list;
+    JobsList* init;
+
 
 public:
     Command *CreateCommand(const char *cmd_line);
@@ -342,6 +363,10 @@ public:
     void add_alias(string alias, string command, string cmd_line);
 
     bool remove_alias(string alias);
+
+    void add_job(const char *cmd_line);
+
+    void remove_job(const char *cmd_line);
 };
 
 
