@@ -367,9 +367,15 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
     _parseCommandLine(filtered_line, aug);
     int i = 0;
-    while (aug[i] != NULL) {
-        args.push_back(aug[i]);
-        i ++;
+    if (strchr(cmd_line, '*') || strchr(cmd_line, '?')) {
+        args.push_back(strdup("bash"));
+        args.push_back(strdup("-c"));
+        args.push_back(strdup(cmd_line));
+    } else {
+        while (aug[i] != NULL) {
+            args.push_back(aug[i]);
+            i ++;
+        }
     }
     // store cmd_line if needed later
 }
