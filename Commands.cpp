@@ -263,19 +263,19 @@ void ShowPidCommand::execute() {
     int original_output_channel = -1;
     if (SmallShell::getInstance().get_input_mode() == 1) {
         original_output_channel = dup(1); // may be illegal
-        // close(1);
-        // open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        dup2(fd, 1);
-        close(fd);
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // dup2(fd, 1);
+        // close(fd);
     }
     else if (SmallShell::getInstance().get_input_mode() == 2) {
         original_output_channel = dup(1); // may be illegal
-        // close(1);
-        // open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        dup2(fd, 1);
-        close(fd);
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // dup2(fd, 1);
+        // close(fd);
     }
 
     string str = "smash pid is " + to_string(getpid()) + "\n";
@@ -293,24 +293,24 @@ void GetCurrDirCommand::execute() {
     int original_output_channel = -1;
     if (SmallShell::getInstance().get_input_mode() == 1) {
         original_output_channel = dup(1); // may be illegal
-        // close(1);
-        // open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        int fd = open(SmallShell::getInstance().get_output().c_str(),O_CREAT | O_TRUNC | O_RDWR, 0666);
-        cerr << "fd=" << fd << endl;
-        if (fd == -1) {
-            perror("open failed");
-            return;
-        }
-        dup2(fd, STDOUT_FILENO);
-        close(fd);
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(),O_CREAT | O_TRUNC | O_RDWR, 0666);
+        // cerr << "fd=" << fd << endl;
+        // if (fd == -1) {
+        //     perror("open failed");
+        //     return;
+        // }
+        // dup2(fd, STDOUT_FILENO);
+        // close(fd);
     }
     else if (SmallShell::getInstance().get_input_mode() == 2) {
         original_output_channel = dup(1); // may be illegal
-        // close(1);
-        // open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT | O_APPEND | O_RDWR, 0666);
-        dup2(fd, 1);
-        close(fd);
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT | O_APPEND | O_RDWR, 0666);
+        // dup2(fd, 1);
+        // close(fd);
     }
 
     char* path = getcwd(NULL, 0);
@@ -365,24 +365,20 @@ void AliasCommand::execute() {
     int original_output_channel = -1;
     if (SmallShell::getInstance().get_input_mode() == 1) {
         original_output_channel = dup(1); // may be illegal
-        // close(1);
-        // open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        dup2(fd, 1);
-        close(fd);
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        // dup2(fd, 1);
+        // close(fd);
     } else if (SmallShell::getInstance().get_input_mode() == 2) {
         original_output_channel = dup(1); // may be illegal
-        // close(1);
-        // open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        dup2(fd, 1);
-        close(fd);
+        close(1);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        // dup2(fd, 1);
+        // close(fd);
     }
-    //string stripped_input1 = _trim(string(cmd_line));
-    //cout << "stripped_input1: " << stripped_input1 << endl;
-    //cout << "input: " << SmallShell::getInstance().get_input() << endl;
     string stripped_input = _trim(string(SmallShell::getInstance().get_input()));
-    //cout << "stripped_input: " << stripped_input << endl;
 
     if (stripped_input == "alias") {
         write(1,"\n",1);
@@ -516,18 +512,18 @@ void ExternalCommand::execute() {
     pid_t pid = fork();
     if (pid == 0) {
         if (SmallShell::getInstance().get_input_mode() == 1) {
-            // close(1);
-            // open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-            int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-            dup2(fd, 1);
-            close(fd);
+            close(1);
+            open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+            // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+            // dup2(fd, 1);
+            // close(fd);
         }
         else if (SmallShell::getInstance().get_input_mode() == 2) {
-            // close(1);
-            // open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-            int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-            dup2(fd, 1);
-            close(fd);
+            close(1);
+            open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+            // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+            // dup2(fd, 1);
+            // close(fd);
         }
 
 
@@ -536,9 +532,7 @@ void ExternalCommand::execute() {
         execvp(args[0], args.data());
     } else if (pid > 0) {
         if (!is_background) {
-            //cout << "///4///" << endl;
             waitpid(pid, nullptr, 0);
-            //cout << "///5///" << endl;
         }
     }
     // your implementation or leave empty for now
