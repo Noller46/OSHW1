@@ -160,9 +160,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("fg") == 0) {
          return new ForegroundCommand(cmd_line, jobs);
     }
-    // if (firstWord.compare("quit") == 0) {
-    //     return new QuitCommand(cmd_line, jobs);
-    // }
+    if (firstWord.compare("quit") == 0) {
+         return new QuitCommand(cmd_line, jobs);
+    }
     // if (firstWord.compare("kill") == 0) {
     //     return new KillCommand(cmd_line, jobs);
     // }
@@ -641,8 +641,6 @@ void ExternalCommand::execute() {
 
         setpgrp();
         execvp(args[0], args.data());
-        string str = "some error message \n"; // needs to be redone
-        write(2,str.c_str(),str.length());
     } else if (pid > 0) {
         if (!is_background) {
             waitpid(pid, nullptr, 0);
@@ -726,10 +724,10 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): Buil
     jobl = jobs;
 }
 
-void JobsList::fg_by_idx(int idx) {
+void JobsList::removeJobById(int jobId) {
     JobEntry* trav = init;
-    while (idx > 0) {
-        idx --;
+    while (jobId > 0) {
+        jobId --;
         trav = trav->next;
     }
     waitpid(trav->get_pid(),  nullptr, 0);
@@ -737,11 +735,38 @@ void JobsList::fg_by_idx(int idx) {
 }
 
 void ForegroundCommand::execute() {
-    jobl->fg_by_idx(idx);
+    jobl->removeJobById(idx);
 }
 
 int JobsList::get_max() {
     return max;
+}
+
+QuitCommand::QuitCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cmd_line) {
+    char *filtered_line = strdup(cmd_line);
+    if (_isBackgroundComamnd(filtered_line)) _removeBackgroundSign(filtered_line);
+    char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
+    _parseCommandLine(filtered_line, aug);
+    type2 = false;
+    if (aug[1] == NULL) {
+        type2 = true;
+    }
+    jobl = jobs;
+}
+
+void QuitCommand::execute() {
+    if (type2) {
+        jobl->killAllJobs();
+    }
+    exit(0);
+}
+
+void JobsList::killAllJobs() {
+    JobEntry* trav = init->next;
+    while (string(trav->get_line()) != "aaaaa") {
+        kill(trav->get_pid(), SIGKILL);
+        trav = trav->next;
+    }
 }
 
 
