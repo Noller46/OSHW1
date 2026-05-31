@@ -287,8 +287,6 @@ void SmallShell::set_output(string str) {
 
 
 
-
-
 ChangePromptCommand::ChangePromptCommand(const char* cmd_line): BuiltInCommand(cmd_line) {
     char** args = new char*[COMMAND_MAX_ARGS];
     int size = _parseCommandLine(cmd_line, args);
@@ -307,55 +305,16 @@ void ChangePromptCommand::execute() {
 ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void ShowPidCommand::execute() {
-    // int original_output_channel = -1;
-    // if (SmallShell::getInstance().get_input_mode() == 1) {
-    //     original_output_channel = dup(1); // may be illegal
-    //     close(1);
-    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-    //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-    //     // dup2(fd, 1);
-    //     // close(fd);
-    // }
-    // else if (SmallShell::getInstance().get_input_mode() == 2) {
-    //     original_output_channel = dup(1); // may be illegal
-    //     close(1);
-    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-    //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-    //     // dup2(fd, 1);
-    //     // close(fd);
-    // }
-
     string str = "smash pid is " + to_string(getpid()) + "\n";
     write(1,str.c_str(),str.length());
-
-    // if (original_output_channel != -1) {
-    //     dup2(original_output_channel, 1);
-    //     close(original_output_channel);
-    // }
 }
 
 GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void GetCurrDirCommand::execute() {
-    // int original_output_channel = -1;
-    // if (SmallShell::getInstance().get_input_mode() == 1) {
-    //     original_output_channel = dup(1);
-    //     close(1);
-    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0666);
-    // } else if (SmallShell::getInstance().get_input_mode() == 2) {
-    //     original_output_channel = dup(1);
-    //     close(1);
-    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND|O_RDWR, 0666);
-    // }
-
     char* path = getcwd(NULL, 0);
     string str = string(path) + "\n";
     write(1,str.c_str(),str.length());
-
-    // if (original_output_channel != -1) {
-    //     dup2(original_output_channel, 1);
-    //     close(original_output_channel);
-    // }
 }
 
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
@@ -397,22 +356,6 @@ void ChangeDirCommand::execute() {
 AliasCommand::AliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
 
 void AliasCommand::execute() {
-    // int original_output_channel = -1;
-    // if (SmallShell::getInstance().get_input_mode() == 1) {
-    //     original_output_channel = dup(1); // may be illegal
-    //     close(1);
-    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-    //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-    //     // dup2(fd, 1);
-    //     // close(fd);
-    // } else if (SmallShell::getInstance().get_input_mode() == 2) {
-    //     original_output_channel = dup(1); // may be illegal
-    //     close(1);
-    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-    //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-    //     // dup2(fd, 1);
-    //     // close(fd);
-    // }
     string stripped_input = _trim(string(SmallShell::getInstance().get_input()));
 
     if (stripped_input == "alias") {
@@ -438,10 +381,6 @@ void AliasCommand::execute() {
                 alias == "usbinfo ") { // may need to add more
                 string str = "smash error: alias: " + string(alias) + " already exists or is a reserved command\n";
                 write(1,str.c_str(),str.length());
-                // if (original_output_channel != -1) {                          // may need
-                //     dup2(original_output_channel, 1);  // to remove
-                //     close(original_output_channel);                          // all of this
-                // }
                 return;
             }
 
@@ -457,10 +396,6 @@ void AliasCommand::execute() {
             write(1,str.c_str(),str.length());
         }
     }
-    // if (original_output_channel != -1) {
-    //     dup2(original_output_channel, 1);
-    //     close(original_output_channel);
-    // }
 }
 
 AliassedCommand::AliassedCommand(const char *cmd_line, string command) : BuiltInCommand(cmd_line),
@@ -682,8 +617,6 @@ void WhoAmICommand::execute() {
     }
 }
 
-
-
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     is_background = _isBackgroundComamnd(cmd_line);
     my_name = strdup(cmd_line);
@@ -740,6 +673,8 @@ void ExternalCommand::execute() {
     // your implementation or leave empty for now
 }
 
+
+
 JobsList::JobsList() {
     init = new JobEntry();
 }
@@ -768,8 +703,6 @@ void JobsList::printJobsList() {
         trav = trav->next;
     }
 }
-
-
 
 JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line), jobs(jobs) {}
 
