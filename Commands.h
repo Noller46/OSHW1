@@ -403,11 +403,15 @@ public:
 
     int get_input_mode();
 
-    void set_input_mode(int mode);
-
     string get_input();
 
     string get_output();
+
+    void set_input_mode(int mode);
+
+    void set_input(string str);
+
+    void set_output(string str);
 
     bool get_pipe_in();
 
