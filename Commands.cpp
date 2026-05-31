@@ -176,9 +176,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     // if (firstWord.compare("unsetenv") == 0) {
     //     return new UnSetEnvCommand(cmd_line);
     // }
-    // if (firstWord.compare("sysinfo") == 0) {
-    //     return new SysInfoCommand(filtered_line);
-    // }
+    if (firstWord.compare("sysinfo") == 0) {
+        return new SysInfoCommand(filtered_line);
+    }
     if (firstWord.compare("du") == 0) {
         return new DiskUsageCommand(filtered_line);
     }
@@ -518,15 +518,14 @@ void UnSetEnvCommand::execute() {
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void SysInfoCommand::execute() { // works somehow
-    // struct utsname info;
-    // uname(&info);
-    //
-    // cout << "System: " << info.sysname << endl;
-    // cout << "Hostname: " << info.nodename << endl;
-    // cout << "Kernel: " << info.release << endl;
-    // cout << "Architecture: " << info.machine << endl;
-    // string str = "smash error: unalias: " + string(name) + " alias does not exist\n";
-    // write(1,str.c_str(),str.length());
+    struct utsname info;
+    uname(&info);
+
+    string str = "System: " + string(info.sysname) + "\n";
+    str += "Hostname: " + string(info.nodename) + "\n";
+    str += "Kernel: " + string(info.release) + "\n";
+    str += "Machine: " + string(info.machine) + "\n";
+    write(1,str.c_str(),str.length());
 }
 
 
