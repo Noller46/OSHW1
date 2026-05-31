@@ -119,10 +119,12 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         input_mode = 2;
         input  = _trim(stripped_input.substr(0, redirect_append));
         output = _trim(stripped_input.substr(redirect_append + 2));
+        return new RedirectionCommand(stripped_input.c_str());
     } else if (redirect != string::npos) {
         input_mode = 1;
         input  = _trim(stripped_input.substr(0, redirect));
         output = _trim(stripped_input.substr(redirect + 1));
+        return new RedirectionCommand(stripped_input.c_str());
     } else if (error_pipe != string::npos) { // this has to be checked before pipe
         input_mode = 4;
         input  = _trim(stripped_input.substr(0, error_pipe));
@@ -305,55 +307,55 @@ void ChangePromptCommand::execute() {
 ShowPidCommand::ShowPidCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void ShowPidCommand::execute() {
-    int original_output_channel = -1;
-    if (SmallShell::getInstance().get_input_mode() == 1) {
-        original_output_channel = dup(1); // may be illegal
-        close(1);
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        // dup2(fd, 1);
-        // close(fd);
-    }
-    else if (SmallShell::getInstance().get_input_mode() == 2) {
-        original_output_channel = dup(1); // may be illegal
-        close(1);
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        // dup2(fd, 1);
-        // close(fd);
-    }
+    // int original_output_channel = -1;
+    // if (SmallShell::getInstance().get_input_mode() == 1) {
+    //     original_output_channel = dup(1); // may be illegal
+    //     close(1);
+    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+    //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+    //     // dup2(fd, 1);
+    //     // close(fd);
+    // }
+    // else if (SmallShell::getInstance().get_input_mode() == 2) {
+    //     original_output_channel = dup(1); // may be illegal
+    //     close(1);
+    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+    //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+    //     // dup2(fd, 1);
+    //     // close(fd);
+    // }
 
     string str = "smash pid is " + to_string(getpid()) + "\n";
     write(1,str.c_str(),str.length());
 
-    if (original_output_channel != -1) {
-        dup2(original_output_channel, 1);
-        close(original_output_channel);
-    }
+    // if (original_output_channel != -1) {
+    //     dup2(original_output_channel, 1);
+    //     close(original_output_channel);
+    // }
 }
 
 GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_line) {}
 
 void GetCurrDirCommand::execute() {
-    int original_output_channel = -1;
-    if (SmallShell::getInstance().get_input_mode() == 1) {
-        original_output_channel = dup(1);
-        close(1);
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0666);
-    } else if (SmallShell::getInstance().get_input_mode() == 2) {
-        original_output_channel = dup(1);
-        close(1);
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND|O_RDWR, 0666);
-    }
+    // int original_output_channel = -1;
+    // if (SmallShell::getInstance().get_input_mode() == 1) {
+    //     original_output_channel = dup(1);
+    //     close(1);
+    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0666);
+    // } else if (SmallShell::getInstance().get_input_mode() == 2) {
+    //     original_output_channel = dup(1);
+    //     close(1);
+    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND|O_RDWR, 0666);
+    // }
 
     char* path = getcwd(NULL, 0);
     string str = string(path) + "\n";
     write(1,str.c_str(),str.length());
 
-    if (original_output_channel != -1) {
-        dup2(original_output_channel, 1);
-        close(original_output_channel);
-    }
+    // if (original_output_channel != -1) {
+    //     dup2(original_output_channel, 1);
+    //     close(original_output_channel);
+    // }
 }
 
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
@@ -395,22 +397,22 @@ void ChangeDirCommand::execute() {
 AliasCommand::AliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
 
 void AliasCommand::execute() {
-    int original_output_channel = -1;
-    if (SmallShell::getInstance().get_input_mode() == 1) {
-        original_output_channel = dup(1); // may be illegal
-        close(1);
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        // dup2(fd, 1);
-        // close(fd);
-    } else if (SmallShell::getInstance().get_input_mode() == 2) {
-        original_output_channel = dup(1); // may be illegal
-        close(1);
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        // dup2(fd, 1);
-        // close(fd);
-    }
+    // int original_output_channel = -1;
+    // if (SmallShell::getInstance().get_input_mode() == 1) {
+    //     original_output_channel = dup(1); // may be illegal
+    //     close(1);
+    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+    //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+    //     // dup2(fd, 1);
+    //     // close(fd);
+    // } else if (SmallShell::getInstance().get_input_mode() == 2) {
+    //     original_output_channel = dup(1); // may be illegal
+    //     close(1);
+    //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+    //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+    //     // dup2(fd, 1);
+    //     // close(fd);
+    // }
     string stripped_input = _trim(string(SmallShell::getInstance().get_input()));
 
     if (stripped_input == "alias") {
@@ -436,10 +438,10 @@ void AliasCommand::execute() {
                 alias == "usbinfo ") { // may need to add more
                 string str = "smash error: alias: " + string(alias) + " already exists or is a reserved command\n";
                 write(1,str.c_str(),str.length());
-                if (original_output_channel != -1) {                          // may need
-                    dup2(original_output_channel, 1);  // to remove
-                    close(original_output_channel);                          // all of this
-                }
+                // if (original_output_channel != -1) {                          // may need
+                //     dup2(original_output_channel, 1);  // to remove
+                //     close(original_output_channel);                          // all of this
+                // }
                 return;
             }
 
@@ -455,10 +457,10 @@ void AliasCommand::execute() {
             write(1,str.c_str(),str.length());
         }
     }
-    if (original_output_channel != -1) {
-        dup2(original_output_channel, 1);
-        close(original_output_channel);
-    }
+    // if (original_output_channel != -1) {
+    //     dup2(original_output_channel, 1);
+    //     close(original_output_channel);
+    // }
 }
 
 AliassedCommand::AliassedCommand(const char *cmd_line, string command) : BuiltInCommand(cmd_line),
@@ -526,6 +528,75 @@ const char* Command::get_line() const {
 
 BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 
+RedirectionCommand::RedirectionCommand(const char* cmd_line) : Command(cmd_line) {}
+
+void RedirectionCommand::execute() {
+    int original_output_channel = dup(1);
+    close(1);
+
+    if (SmallShell::getInstance().get_input_mode() == 1) {
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0666);
+    } else if (SmallShell::getInstance().get_input_mode() == 2) {
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND|O_RDWR, 0666);
+    }
+
+    string temp = SmallShell::getInstance().get_input();
+    SmallShell::getInstance().set_input_mode(0);
+    SmallShell::getInstance().set_input("");
+    SmallShell::getInstance().set_output("");
+
+    Command* cmd = SmallShell::getInstance().CreateCommand(temp.c_str());
+    cmd->execute();
+    delete cmd;
+
+    dup2(original_output_channel, 1);
+    close(original_output_channel);
+
+    void RedirectionCommand::execute() {
+        int original_output = dup(STDOUT_FILENO);
+
+        int fd;
+
+        if (SmallShell::getInstance().get_input_mode() == 1) {
+            fd = open(
+                SmallShell::getInstance().get_output().c_str(),
+                O_WRONLY | O_CREAT | O_TRUNC,
+                0666
+            );
+        } else {
+            fd = open(
+                SmallShell::getInstance().get_output().c_str(),
+                O_WRONLY | O_CREAT | O_APPEND,
+                0666
+            );
+        }
+
+        if (fd == -1) {
+            perror("smash error: open failed");
+            return;
+        }
+
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+
+        string temp = SmallShell::getInstance().get_input();
+
+        SmallShell::getInstance().set_input_mode(0);
+        SmallShell::getInstance().set_input("");
+        SmallShell::getInstance().set_output("");
+
+        Command* cmd =
+            SmallShell::getInstance().CreateCommand(temp.c_str());
+
+        cmd->execute();
+
+        delete cmd;
+
+        dup2(original_output, STDOUT_FILENO);
+        close(original_output);
+    }
+}
+
 PipeCommand::PipeCommand(const char *cmd_line) : Command(cmd_line) {}
 
 void PipeCommand::execute() {
@@ -587,7 +658,7 @@ void DiskUsageCommand::execute() {
         return;
     }
 
-    unsigned long long usage = calc_size(path) / 1024;
+    unsigned long long usage = (calc_size(path) + 1023) / 1024; // this is done to round up to KB
     string str = "Total disk usage: " + to_string(usage) + " KB\n";
     write(1, str.c_str(), str.length());
 }
@@ -639,21 +710,20 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
 void ExternalCommand::execute() {
     pid_t pid = fork();
     if (pid == 0) {
-        if (SmallShell::getInstance().get_input_mode() == 1) {
-            close(1);
-            open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-            // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-            // dup2(fd, 1);
-            // close(fd);
-        }
-        else if (SmallShell::getInstance().get_input_mode() == 2) {
-            close(1);
-            open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-            // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-            // dup2(fd, 1);
-            // close(fd);
-        }
-
+        // if (SmallShell::getInstance().get_input_mode() == 1) {
+        //     close(1);
+        //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
+        //     // dup2(fd, 1);
+        //     // close(fd);
+        // }
+        // else if (SmallShell::getInstance().get_input_mode() == 2) {
+        //     close(1);
+        //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
+        //     // dup2(fd, 1);
+        //     // close(fd);
+        // }
 
         setpgrp();
         execvp(args[0], args.data());
