@@ -421,7 +421,7 @@ public:
 
 string replace_first_word(const char* cmd_line, string command);
 
-unsigned long long calc_size(const string& path);
+unsigned long long calc_size(const char* path);
 
 
 #endif //SMASH_COMMAND_H_

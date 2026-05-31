@@ -181,6 +181,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("du") == 0) {
         return new DiskUsageCommand(filtered_line);
     }
+    if (firstWord.compare("whoami") == 0) {
+        return new WhoAmICommand(filtered_line);
+    }
     for (auto i : getInstance().get_alias_list()) {
         if (get<0>(i) == string(firstWord)) {
             return new AliassedCommand(filtered_line, get<1>(i));
@@ -566,15 +569,22 @@ void DiskUsageCommand::execute() {
     } else if (size == 2) {
         path = args[1];
     } else {
-        string str = "smash error: du: too many arguments \n";
+        string str = "smash error: du: too many arguments\n";
         write(1,str.c_str(),str.length());
         return;
     }
 
-    unsigned long long usage = calc_size(path) / 1000;
+    unsigned long long usage = calc_size(path) / 1024;
     string str = "Total disk usage: " + to_string(usage) + " KB\n";
     write(1, str.c_str(), str.length());
 }
+
+WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line)/*, cmd_line(cmd_line)*/ {}
+
+void WhoAmICommand::execute() {
+
+}
+
 
 
 
@@ -774,8 +784,9 @@ unsigned long long calc_size(const char* path) {
             continue;
         }
         string child = string(path) + "/" + name;
-        total += calc_size(child);
+        total += calc_size(child.c_str());
     }
     closedir(dir);
     return total;
 }
+
