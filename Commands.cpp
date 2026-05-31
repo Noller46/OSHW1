@@ -154,9 +154,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("jobs") == 0) {
         return new JobsCommand(cmd_line, jobs);
     }
-    // if (firstWord.compare("fg") == 0) {
-    //     return new ForegroundCommand(cmd_line, jobs);
-    // }
+    if (firstWord.compare("fg") == 0) {
+         return new ForegroundCommand(cmd_line, jobs);
+    }
     // if (firstWord.compare("quit") == 0) {
     //     return new QuitCommand(cmd_line, jobs);
     // }
@@ -573,7 +573,7 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
         args.push_back(strdup(cmd_line));
     } else {
         while (aug[i] != NULL) {
-            args.push_back(aug[i]);
+            args.push_back(strdup(aug[i]));
             i ++;
         }
     }
@@ -611,7 +611,7 @@ void ExternalCommand::execute() {
         if (!is_background) {
             waitpid(pid, nullptr, 0);
         } else {
-            SmallShell::getInstance().add_job(this);
+            SmallShell::getInstance().add_job(this, pid);
         }
     }
     // your implementation or leave empty for now
@@ -629,19 +629,19 @@ pid_t JobsList::JobEntry::get_pid() {
     return pid;
 }
 
-void SmallShell::add_job(Command* com) {
-    jobs->addJob(com);
+void SmallShell::add_job(Command* com, pid_t pid) {
+    jobs->addJob(com, pid);
 }
 
-void JobsList::addJob(Command* com, bool baba) {
-    new JobEntry(com, init, getpid());
-
+void JobsList::addJob(Command* com, pid_t, bool baba) {
+    max++;
+    new JobEntry(com, init, getpid(), max);
 }
 
 void JobsList::printJobsList() {
     JobEntry* trav = init->next;
     while (string(trav->get_line()) != "aaaaa") {
-        cout << trav->get_line() << ":" << endl;
+        cout << "["<< trav->idx << "] " << trav->get_line() << endl;
         trav = trav->next;
     }
 }
@@ -658,6 +658,7 @@ void JobsCommand::execute() {
 
 void JobsList::removeFinishedJobs() {
     JobEntry* curr = init->next;
+    int ind = 1;
 
     while(curr != init) {
         JobEntry* next = curr->next;
@@ -668,11 +669,46 @@ void JobsList::removeFinishedJobs() {
         if(result > 0)
         {
             delete curr;
+        } else {
+            curr->idx = ind;
+            ind ++;
         }
 
         curr = next;
     }
 }
+
+ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line) {
+    char *filtered_line = strdup(cmd_line);
+    if (_isBackgroundComamnd(filtered_line)) _removeBackgroundSign(filtered_line);
+    char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
+    _parseCommandLine(filtered_line, aug);
+    if (aug[1] == NULL) {
+        idx = jobs->get_max();
+    } else {
+        idx = atoi(aug[1]);
+    }
+    jobl = jobs;
+}
+
+void JobsList::fg_by_idx(int idx) {
+    JobEntry* trav = init;
+    while (idx > 0) {
+        idx --;
+        trav = trav->next;
+    }
+    waitpid(trav->get_pid(),  nullptr, 0);
+
+}
+
+void ForegroundCommand::execute() {
+    jobl->fg_by_idx(idx);
+}
+
+int JobsList::get_max() {
+    return max;
+}
+
 
 
 string replace_first_word(const char* cmd_line, string command) {

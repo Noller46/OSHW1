@@ -190,6 +190,7 @@ public:
     class JobEntry;
 private:
     JobEntry* init;
+    int max;
     // TODO: Add your data members
 public:
     class JobEntry {
@@ -197,14 +198,16 @@ public:
         char* line;
         pid_t pid;
     public:
+        int idx;
         JobEntry* next;
         JobEntry* prev;
         JobEntry(): line(strdup("aaaaa")) {
+            idx = 0;
             next = this;
             prev = this;
         }
 
-        JobEntry(Command* com, JobEntry* next, pid_t pid): line(strdup(com->get_line())), pid(pid), next(next) {
+        JobEntry(Command* com, JobEntry* next, pid_t pid, int idx): line(strdup(com->get_line())), pid(pid), idx(idx), next(next) {
             prev = next->prev;
             this->next = next;
 
@@ -226,7 +229,7 @@ public:
 
     ~JobsList();
 
-    void addJob(Command *cmd, bool isStopped = false);
+    void addJob(Command *cmd, pid_t pid, bool isStopped = false);
 
     void printJobsList();
 
@@ -243,6 +246,10 @@ public:
     JobEntry *getLastStoppedJob(int *jobId);
 
     // TODO: Add extra methods or modify exisitng ones as needed
+    int get_max();
+
+    void fg_by_idx(int idx);
+
 };
 
 //only after background
@@ -273,6 +280,8 @@ public:
 //only after background
 class ForegroundCommand : public BuiltInCommand {
     // TODO: Add your data members
+    int idx;
+    JobsList *jobl;
 public:
     ForegroundCommand(const char *cmd_line, JobsList *jobs);
 
@@ -388,7 +397,7 @@ public:
 
     bool remove_alias(string alias);
 
-    void add_job(Command* com);
+    void add_job(Command* com, pid_t pid);
 
     int get_input_mode();
 
