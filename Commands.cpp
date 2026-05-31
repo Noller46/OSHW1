@@ -325,7 +325,7 @@ ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
 
     if (size > 2) {
         string str = "smash error: cd: too many arguments\n";
-        write(1,str.c_str(),str.length());
+        write(2,str.c_str(),str.length());
     }
     else if (size == 2) {
         valid_command = true;
@@ -337,7 +337,7 @@ ChangeDirCommand::ChangeDirCommand(const char *cmd_line, char **plastPwd):
             else {
                 valid_command = false;
                 string str = "smash error: cd: OLDPWD not set\n";
-                write(1,str.c_str(),str.length());
+                write(2,str.c_str(),str.length());
             }
         }
     }
@@ -347,8 +347,7 @@ void ChangeDirCommand::execute() {
     if (valid_command) {
         SmallShell::getInstance().set_last_dir(getcwd(NULL, 0));
         if (chdir(path) == -1) {
-            string str = "some error message \n"; // needs to be redone
-            write(2,str.c_str(),str.length());
+            perror("smash error: chdir failed");
         }
     }
 }
@@ -380,7 +379,7 @@ void AliasCommand::execute() {
                 alias == "unsetenv " || alias == "sysinfo" || alias == "du" || alias == "whoami" ||
                 alias == "usbinfo ") { // may need to add more
                 string str = "smash error: alias: " + string(alias) + " already exists or is a reserved command\n";
-                write(1,str.c_str(),str.length());
+                write(2,str.c_str(),str.length());
                 return;
             }
 
@@ -393,7 +392,7 @@ void AliasCommand::execute() {
 
         } else {
             string str = "smash error: alias: invalid alias format\n";
-            write(1,str.c_str(),str.length());
+            write(2,str.c_str(),str.length());
         }
     }
 }
@@ -419,7 +418,7 @@ void UnAliasCommand::execute() {
 
     if (size == 1) {
         string str = "smash error: unalias: not enough arguments\n";
-        write(1,str.c_str(),str.length());
+        write(2,str.c_str(),str.length());
 
     }
     else {
@@ -427,7 +426,7 @@ void UnAliasCommand::execute() {
             char* name = args[i];
             if (!SmallShell::getInstance().remove_alias(name)) {
                 string str = "smash error: unalias: " + string(name) + " alias does not exist\n";
-                write(1,str.c_str(),str.length());
+                write(2,str.c_str(),str.length());
                 return;
             }
         }
@@ -486,50 +485,6 @@ void RedirectionCommand::execute() {
 
     dup2(original_output_channel, 1);
     close(original_output_channel);
-
-    void RedirectionCommand::execute() {
-        int original_output = dup(STDOUT_FILENO);
-
-        int fd;
-
-        if (SmallShell::getInstance().get_input_mode() == 1) {
-            fd = open(
-                SmallShell::getInstance().get_output().c_str(),
-                O_WRONLY | O_CREAT | O_TRUNC,
-                0666
-            );
-        } else {
-            fd = open(
-                SmallShell::getInstance().get_output().c_str(),
-                O_WRONLY | O_CREAT | O_APPEND,
-                0666
-            );
-        }
-
-        if (fd == -1) {
-            perror("smash error: open failed");
-            return;
-        }
-
-        dup2(fd, STDOUT_FILENO);
-        close(fd);
-
-        string temp = SmallShell::getInstance().get_input();
-
-        SmallShell::getInstance().set_input_mode(0);
-        SmallShell::getInstance().set_input("");
-        SmallShell::getInstance().set_output("");
-
-        Command* cmd =
-            SmallShell::getInstance().CreateCommand(temp.c_str());
-
-        cmd->execute();
-
-        delete cmd;
-
-        dup2(original_output, STDOUT_FILENO);
-        close(original_output);
-    }
 }
 
 PipeCommand::PipeCommand(const char *cmd_line) : Command(cmd_line) {}
@@ -545,6 +500,7 @@ void PipeCommand::execute() {
     pipe(fd);
 
     pid_t pid_in = fork();
+    //perror("smash error: fork failed");
     if (pid_in == 0) { // first son - writer
         if (SmallShell::getInstance().get_input_mode() == 3) {
             dup2(fd[1], 1);
@@ -589,7 +545,7 @@ void DiskUsageCommand::execute() {
         path = args[1];
     } else {
         string str = "smash error: du: too many arguments\n";
-        write(1,str.c_str(),str.length());
+        write(2,str.c_str(),str.length());
         return;
     }
 
@@ -643,25 +599,9 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
 void ExternalCommand::execute() {
     pid_t pid = fork();
     if (pid == 0) {
-        // if (SmallShell::getInstance().get_input_mode() == 1) {
-        //     close(1);
-        //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        //     // dup2(fd, 1);
-        //     // close(fd);
-        // }
-        // else if (SmallShell::getInstance().get_input_mode() == 2) {
-        //     close(1);
-        //     open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        //     // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        //     // dup2(fd, 1);
-        //     // close(fd);
-        // }
-
         setpgrp();
         execvp(args[0], args.data());
-        string str = "some error message \n"; // needs to be redone
-        write(2,str.c_str(),str.length());
+        perror("smash error: execvp failed");
         exit(1);
     } else if (pid > 0) {
         if (!is_background) {
