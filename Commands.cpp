@@ -196,8 +196,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     } else {
         return new ExternalCommand(cmd_line);
     }
-
-    return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
@@ -517,6 +515,14 @@ void SysInfoCommand::execute() { // works somehow
 
 
 
+Command::Command(const char* cmd_line): og_line(cmd_line) {}
+
+const char* Command::get_line() const {
+    return og_line;
+}
+
+BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
+
 PipeCommand::PipeCommand(const char *cmd_line) : Command(cmd_line) {}
 
 void PipeCommand::execute() {
@@ -580,7 +586,7 @@ void DiskUsageCommand::execute() {
     write(1, str.c_str(), str.length());
 }
 
-WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line)/*, cmd_line(cmd_line)*/ {}
+WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line) {}
 
 void WhoAmICommand::execute() {
     uid_t user_id = getuid();
@@ -600,12 +606,6 @@ void WhoAmICommand::execute() {
 }
 
 
-
-
-Command::Command(const char* cmd_line): og_line(cmd_line) {}
-
-// add to Commands.cpp
-BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     is_background = _isBackgroundComamnd(cmd_line);
@@ -628,10 +628,6 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
         }
     }
     // store cmd_line if needed later
-}
-
-JobsList::JobsList() {
-    init = new JobEntry();
 }
 
 void ExternalCommand::execute() {
@@ -667,8 +663,8 @@ void ExternalCommand::execute() {
     // your implementation or leave empty for now
 }
 
-const char* Command::get_line() const {
-    return og_line;
+JobsList::JobsList() {
+    init = new JobEntry();
 }
 
 const char *JobsList::JobEntry::get_line() {
