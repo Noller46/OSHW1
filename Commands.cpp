@@ -15,9 +15,10 @@
 #include <fcntl.h> // might be illegal
 #include <sys/types.h> // shown in power point, may not be necessary
 #include <signal.h> // shown in power point, may not be necessary
-#include <sys/statvfs.h> // might be illegal
+//#include <sys/statvfs.h> // might be illegal
 #include <dirent.h>
 #include <sys/stat.h>
+#include <pwd.h>
 
 using namespace std;
 
@@ -582,7 +583,20 @@ void DiskUsageCommand::execute() {
 WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line)/*, cmd_line(cmd_line)*/ {}
 
 void WhoAmICommand::execute() {
+    uid_t user_id = getuid();
+    gid_t group_id = getgid();
+    struct passwd *user_information = getpwuid(user_id);
 
+    if (user_information != nullptr) {
+        string str = string(user_information->pw_name) + "\n";
+        write(1, str.c_str(), str.length());
+        str = to_string(user_id) + "\n";
+        write(1, str.c_str(), str.length());
+        str = to_string(group_id) + "\n";
+        write(1, str.c_str(), str.length());
+        str = string(user_information->pw_dir) + "\n";
+        write(1, str.c_str(), str.length());
+    }
 }
 
 
