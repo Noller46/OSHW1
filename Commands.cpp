@@ -337,25 +337,13 @@ GetCurrDirCommand::GetCurrDirCommand(char const* cmd_line): BuiltInCommand(cmd_l
 void GetCurrDirCommand::execute() {
     int original_output_channel = -1;
     if (SmallShell::getInstance().get_input_mode() == 1) {
-        original_output_channel = dup(1); // may be illegal
+        original_output_channel = dup(1);
         close(1);
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0777);
-        // int fd = open(SmallShell::getInstance().get_output().c_str(),O_CREAT | O_TRUNC | O_RDWR, 0666);
-        // cerr << "fd=" << fd << endl;
-        // if (fd == -1) {
-        //     perror("open failed");
-        //     return;
-        // }
-        // dup2(fd, STDOUT_FILENO);
-        // close(fd);
-    }
-    else if (SmallShell::getInstance().get_input_mode() == 2) {
-        original_output_channel = dup(1); // may be illegal
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0666);
+    } else if (SmallShell::getInstance().get_input_mode() == 2) {
+        original_output_channel = dup(1);
         close(1);
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND |O_RDWR, 0777);
-        // int fd = open(SmallShell::getInstance().get_output().c_str(), O_CREAT | O_APPEND | O_RDWR, 0666);
-        // dup2(fd, 1);
-        // close(fd);
+        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND|O_RDWR, 0666);
     }
 
     char* path = getcwd(NULL, 0);
