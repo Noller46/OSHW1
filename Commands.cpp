@@ -97,19 +97,21 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    // checks for I/O redirection
     string stripped_input = _trim(string(cmd_line));
     input = stripped_input;
 
-    size_t should_not_redirect  = stripped_input.find(">>>");
+    // checks for I/O redirection and pipes
+    size_t should_not_redirect  = stripped_input.find(">>>"); // may not be needed. if needed, maybe add one for pipes too
     size_t redirect_append = stripped_input.find(">>");
     size_t redirect  = stripped_input.find(">");
+    size_t pipe  = stripped_input.find("|");
+    size_t error_pipe  = stripped_input.find("|&");
 
     if (should_not_redirect != string::npos) {
         redirect_append = string::npos;
         redirect  = string::npos;
     }
-    if (redirect_append != string::npos) { // this has to be checked first
+    if (redirect_append != string::npos) { // this has to be checked redirect
         input_mode = 2;
         input  = _trim(stripped_input.substr(0, redirect_append));
         output = _trim(stripped_input.substr(redirect_append + 2));
@@ -117,6 +119,14 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         input_mode = 1;
         input  = _trim(stripped_input.substr(0, redirect));
         output = _trim(stripped_input.substr(redirect + 1));
+    } else if (error_pipe != string::npos) { // this has to be checked before pipe
+        input_mode = 4;
+        input  = _trim(stripped_input.substr(0, error_pipe));
+        output = _trim(stripped_input.substr(error_pipe + 1));
+    } else if (pipe != string::npos) {
+        input_mode = 3;
+        input  = _trim(stripped_input.substr(0, pipe));
+        output = _trim(stripped_input.substr(pipe + 1));
     }
 
     char *filtered_line = strdup(cmd_line); //is this good? idk
