@@ -659,9 +659,9 @@ void SmallShell::add_job(Command* com, pid_t pid) {
     jobs->addJob(com, pid);
 }
 
-void JobsList::addJob(Command* com, pid_t, bool baba) {
+void JobsList::addJob(Command* com, pid_t pid, bool baba) {
     max++;
-    new JobEntry(com, init, getpid(), max);
+    new JobEntry(com, init, pid, max);
 }
 
 void JobsList::printJobsList() {
