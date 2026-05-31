@@ -15,6 +15,9 @@
 #include <fcntl.h> // might be illegal
 #include <sys/types.h> // shown in power point, may not be necessary
 #include <signal.h> // shown in power point, may not be necessary
+#include <sys/statvfs.h> // might be illegal
+#include <dirent.h>
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -84,7 +87,7 @@ void _removeBackgroundSign(char *cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-SmallShell::SmallShell() : text_prompt("smash> "), last_dir(nullptr), input_mode(0), pipe_in(false), pipe_out(false) {
+SmallShell::SmallShell() : text_prompt("smash> "), last_dir(nullptr), input_mode(0) /*pipe_in(false), pipe_out(false)*/ {
     // TODO: add your implementation
     jobs = new JobsList();
 }
@@ -175,6 +178,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     // if (firstWord.compare("sysinfo") == 0) {
     //     return new SysInfoCommand(filtered_line);
     // }
+    if (firstWord.compare("du") == 0) {
+        return new DiskUsageCommand(filtered_line);
+    }
     for (auto i : getInstance().get_alias_list()) {
         if (get<0>(i) == string(firstWord)) {
             return new AliassedCommand(filtered_line, get<1>(i));
@@ -192,7 +198,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
-    // Please note that you must fork smash process for some commands (e.g., external commands....)
     input_mode = 0;
     input = "";
     output = "";
@@ -251,21 +256,21 @@ string SmallShell::get_output() {
     return output;
 }
 
-bool SmallShell::get_pipe_in() {
-    return pipe_in;
-}
-
-bool SmallShell::get_pipe_out() {
-    return pipe_out;
-}
-
-void SmallShell::set_pipe_in(bool input) {
-    pipe_in = input;
-}
-
-void SmallShell::set_pipe_out(bool input) {
-    pipe_out = input;
-}
+// bool SmallShell::get_pipe_in() {
+//     return pipe_in;
+// }
+//
+// bool SmallShell::get_pipe_out() {
+//     return pipe_out;
+// }
+//
+// void SmallShell::set_pipe_in(bool input) {
+//     pipe_in = input;
+// }
+//
+// void SmallShell::set_pipe_out(bool input) {
+//     pipe_out = input;
+// }
 
 
 
@@ -549,10 +554,31 @@ void PipeCommand::execute() {
     waitpid(pid_out, nullptr, 0);
 }
 
+DiskUsageCommand::DiskUsageCommand(const char *cmd_line) : Command(cmd_line), cmd_line(cmd_line) {}
 
+void DiskUsageCommand::execute() {
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int size = _parseCommandLine(cmd_line, args);
+    char* path;
 
-Command::Command(const char* cmd_line): og_line(cmd_line) {
+    if (size == 1) {
+        path = getcwd(NULL, 0);
+    } else if (size == 2) {
+        path = args[1];
+    } else {
+        string str = "smash error: du: too many arguments \n";
+        write(1,str.c_str(),str.length());
+        return;
+    }
+
+    unsigned long long usage = calc_size(path) / 1000;
+    string str = "Total disk usage: " + to_string(usage) + " KB\n";
+    write(1, str.c_str(), str.length());
 }
+
+
+
+Command::Command(const char* cmd_line): og_line(cmd_line) {}
 
 // add to Commands.cpp
 BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
@@ -648,8 +674,7 @@ void JobsList::printJobsList() {
 
 
 
-JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line), jobs(jobs) {
-}
+JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line), jobs(jobs) {}
 
 void JobsCommand::execute() {
     jobs->removeFinishedJobs();
@@ -723,5 +748,34 @@ string replace_first_word(const char* cmd_line, string command) {
     return str;
 }
 
+unsigned long long calc_size(const char* path) {
+    struct stat st;
 
+    if (lstat(path, &st) == -1) {
+        return 0;
+    }
+    if (S_ISLNK(st.st_mode)) {
+        return 0;
+    }
 
+    unsigned long long total = st.st_blocks * 512;
+    if (S_ISREG(st.st_mode)) { // file
+        return total;
+    }
+    DIR* dir = opendir(path); // directory
+    if (!dir) {
+        return total;
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        string name = entry->d_name;
+        if (name == "." || name == "..") {
+            continue;
+        }
+        string child = string(path) + "/" + name;
+        total += calc_size(child);
+    }
+    closedir(dir);
+    return total;
+}

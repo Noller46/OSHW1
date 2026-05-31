@@ -74,8 +74,8 @@ public:
 class PipeCommand : public Command {
     // TODO: Add your data members
 private:
-    char* first_command;
-    char* second_command;
+    //char* first_command;
+    //char* second_command;
 public:
     PipeCommand(const char *cmd_line);
 
@@ -86,6 +86,8 @@ public:
 };
 
 class DiskUsageCommand : public Command {
+private:
+    const char* cmd_line;
 public:
     DiskUsageCommand(const char *cmd_line);
 
@@ -362,8 +364,8 @@ private:
     int input_mode;
     string input;
     string output;
-    bool pipe_in;
-    bool pipe_out;
+    //bool pipe_in;
+    //bool pipe_out;
 
 public:
     Command *CreateCommand(const char *cmd_line);
@@ -418,6 +420,8 @@ public:
 
 
 string replace_first_word(const char* cmd_line, string command);
+
+unsigned long long calc_size(const string& path);
 
 
 #endif //SMASH_COMMAND_H_
