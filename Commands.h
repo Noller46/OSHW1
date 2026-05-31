@@ -192,11 +192,12 @@ public:
     class JobEntry;
 private:
     JobEntry* init;
+    // TODO: Add your data members
 public:
     class JobEntry {
         // TODO: Add your data members
-        char * line;
-        //pid_t pid;
+        char* line;
+        pid_t pid;
     public:
         JobEntry* next;
         JobEntry* prev;
@@ -205,7 +206,7 @@ public:
             prev = this;
         }
 
-        JobEntry(Command* com, JobEntry* next): line(strdup(com->get_line())), next(next) {
+        JobEntry(Command* com, JobEntry* next, pid_t pid): line(strdup(com->get_line())), pid(pid), next(next) {
             prev = next->prev;
             this->next = next;
 
@@ -219,10 +220,10 @@ public:
         }
 
         const char* get_line();
+        pid_t get_pid();
+
     };
 
-    // TODO: Add your data members
-public:
     JobsList();
 
     ~JobsList();
@@ -249,6 +250,7 @@ public:
 //only after background
 class JobsCommand : public BuiltInCommand {
     // TODO: Add your data members
+    JobsList* jobs;
 public:
     JobsCommand(const char *cmd_line, JobsList *jobs);
 
@@ -349,7 +351,7 @@ private:
     string text_prompt;
     char* last_dir;
     vector<tuple<string, string, string>> alias_list;
-    JobsList* J_list;
+    JobsList* jobs;
     int input_mode;
     string input;
     string output;

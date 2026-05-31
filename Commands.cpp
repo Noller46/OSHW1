@@ -89,7 +89,7 @@ void _removeBackgroundSign(char *cmd_line) {
 
 SmallShell::SmallShell() : text_prompt("smash> "), last_dir(nullptr), input_mode(0) /*pipe_in(false), pipe_out(false)*/ {
     // TODO: add your implementation
-    J_list = new JobsList();
+    jobs = new JobsList();
 }
 
 SmallShell::~SmallShell() {
@@ -154,9 +154,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("cd") == 0) {
         return new ChangeDirCommand(filtered_line, &getInstance().last_dir);
     }
-    //if (firstWord.compare("jobs") == 0) {
-    //    return new JobsCommand(cmd_line, jobs);
-    //}
+    if (firstWord.compare("jobs") == 0) {
+        return new JobsCommand(cmd_line, jobs);
+    }
     // if (firstWord.compare("fg") == 0) {
     //     return new ForegroundCommand(cmd_line, jobs);
     // }
@@ -631,6 +631,8 @@ void ExternalCommand::execute() {
 
         setpgrp();
         execvp(args[0], args.data());
+        string str = "some error message \n"; // needs to be redone
+        write(2,str.c_str(),str.length());
     } else if (pid > 0) {
         if (!is_background) {
             waitpid(pid, nullptr, 0);
@@ -649,12 +651,17 @@ const char *JobsList::JobEntry::get_line() {
     return line;
 }
 
+pid_t JobsList::JobEntry::get_pid() {
+    return pid;
+}
+
 void SmallShell::add_job(Command* com) {
-    J_list->addJob(com);
+    jobs->addJob(com);
 }
 
 void JobsList::addJob(Command* com, bool baba) {
-    new JobEntry(com, init);
+    new JobEntry(com, init, getpid());
+
 }
 
 void JobsList::printJobsList() {
@@ -662,6 +669,33 @@ void JobsList::printJobsList() {
     while (string(trav->get_line()) != "aaaaa") {
         cout << trav->get_line() << ":" << endl;
         trav = trav->next;
+    }
+}
+
+
+
+JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line), jobs(jobs) {}
+
+void JobsCommand::execute() {
+    jobs->removeFinishedJobs();
+    jobs->printJobsList();
+}
+
+void JobsList::removeFinishedJobs() {
+    JobEntry* curr = init->next;
+
+    while(curr != init) {
+        JobEntry* next = curr->next;
+
+        pid_t result =
+            waitpid(curr->get_pid(), nullptr, WNOHANG);
+
+        if(result > 0)
+        {
+            delete curr;
+        }
+
+        curr = next;
     }
 }
 
