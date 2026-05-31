@@ -15,9 +15,10 @@
 #include <fcntl.h> // might be illegal
 #include <sys/types.h> // shown in power point, may not be necessary
 #include <signal.h> // shown in power point, may not be necessary
-#include <sys/statvfs.h> // might be illegal
+//#include <sys/statvfs.h> // might be illegal
 #include <dirent.h>
 #include <sys/stat.h>
+#include <pwd.h>
 
 using namespace std;
 
@@ -125,7 +126,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     } else if (error_pipe != string::npos) { // this has to be checked before pipe
         input_mode = 4;
         input  = _trim(stripped_input.substr(0, error_pipe));
-        output = _trim(stripped_input.substr(error_pipe + 1));
+        output = _trim(stripped_input.substr(error_pipe + 2));
         return new PipeCommand(stripped_input.c_str()); // probably needs to be filtered_line
     } else if (pipe != string::npos) {
         input_mode = 3;
@@ -195,8 +196,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     } else {
         return new ExternalCommand(cmd_line);
     }
-
-    return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
@@ -247,16 +246,24 @@ int SmallShell::get_input_mode() {
     return input_mode;
 }
 
-void SmallShell::set_input_mode(int mode) {
-    input_mode = mode;
-}
-
 string SmallShell::get_input() {
     return input;
 }
 
 string SmallShell::get_output() {
     return output;
+}
+
+void SmallShell::set_input_mode(int mode) {
+    input_mode = mode;
+}
+
+void SmallShell::set_input(string str) {
+    input = str;
+}
+
+void SmallShell::set_output(string str) {
+    output = str;
 }
 
 // bool SmallShell::get_pipe_in() {
@@ -441,6 +448,10 @@ void AliasCommand::execute() {
                 alias == "usbinfo ") { // may need to add more
                 string str = "smash error: alias: " + string(alias) + " already exists or is a reserved command\n";
                 write(1,str.c_str(),str.length());
+                if (original_output_channel != -1) {                          // may need
+                    dup2(original_output_channel, 1);  // to remove
+                    close(original_output_channel);                          // all of this
+                }
                 return;
             }
 
@@ -466,6 +477,10 @@ AliassedCommand::AliassedCommand(const char *cmd_line, string command) : BuiltIn
 cmd_line(cmd_line), command(command) {}
 
 void AliassedCommand::execute() {
+    SmallShell::getInstance().set_input_mode(0);
+    SmallShell::getInstance().set_input("");
+    SmallShell::getInstance().set_output("");
+
     string temp = replace_first_word(cmd_line, command);
     Command* cmd = SmallShell::getInstance().CreateCommand(temp.c_str());
     cmd->execute();
@@ -516,11 +531,22 @@ void SysInfoCommand::execute() { // works somehow
 
 
 
+Command::Command(const char* cmd_line): og_line(cmd_line) {}
+
+const char* Command::get_line() const {
+    return og_line;
+}
+
+BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
+
 PipeCommand::PipeCommand(const char *cmd_line) : Command(cmd_line) {}
 
 void PipeCommand::execute() {
-    const char* pipe_in = SmallShell::getInstance().get_input().c_str();
-    const char* pipe_out = SmallShell::getInstance().get_output().c_str();
+    string input = SmallShell::getInstance().get_input();
+    string output = SmallShell::getInstance().get_output();
+
+    const char* pipe_in = input.c_str();
+    const char* pipe_out = output.c_str();
 
     int fd[2];
     pipe(fd);
@@ -530,7 +556,7 @@ void PipeCommand::execute() {
         if (SmallShell::getInstance().get_input_mode() == 3) {
             dup2(fd[1], 1);
         } else {
-            dup2(fd[2], 2);
+            dup2(fd[1], 2);
         }
         close(fd[0]);
         close(fd[1]);
@@ -579,19 +605,26 @@ void DiskUsageCommand::execute() {
     write(1, str.c_str(), str.length());
 }
 
-WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line)/*, cmd_line(cmd_line)*/ {}
+WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line) {}
 
 void WhoAmICommand::execute() {
+    uid_t user_id = getuid();
+    gid_t group_id = getgid();
+    struct passwd *user_information = getpwuid(user_id);
 
+    if (user_information != nullptr) {
+        string str = string(user_information->pw_name) + "\n";
+        write(1, str.c_str(), str.length());
+        str = to_string(user_id) + "\n";
+        write(1, str.c_str(), str.length());
+        str = to_string(group_id) + "\n";
+        write(1, str.c_str(), str.length());
+        str = string(user_information->pw_dir) + "\n";
+        write(1, str.c_str(), str.length());
+    }
 }
 
 
-
-
-Command::Command(const char* cmd_line): og_line(cmd_line) {}
-
-// add to Commands.cpp
-BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     is_background = _isBackgroundComamnd(cmd_line);
@@ -616,10 +649,6 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
     // store cmd_line if needed later
 }
 
-JobsList::JobsList() {
-    init = new JobEntry();
-}
-
 void ExternalCommand::execute() {
     pid_t pid = fork();
     if (pid == 0) {
@@ -641,6 +670,9 @@ void ExternalCommand::execute() {
 
         setpgrp();
         execvp(args[0], args.data());
+        string str = "some error message \n"; // needs to be redone
+        write(2,str.c_str(),str.length());
+        exit(1);
     } else if (pid > 0) {
         if (!is_background) {
             waitpid(pid, nullptr, 0);
@@ -651,8 +683,8 @@ void ExternalCommand::execute() {
     // your implementation or leave empty for now
 }
 
-const char* Command::get_line() const {
-    return og_line;
+JobsList::JobsList() {
+    init = new JobEntry();
 }
 
 const char *JobsList::JobEntry::get_line() {
@@ -814,4 +846,3 @@ unsigned long long calc_size(const char* path) {
     closedir(dir);
     return total;
 }
-
