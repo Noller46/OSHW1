@@ -178,6 +178,9 @@ class JobsList;
 //only after background
 class QuitCommand : public BuiltInCommand {
     // TODO: Add your data members public:
+    JobsList* jobl;
+    bool type2;
+public:
     QuitCommand(const char *cmd_line, JobsList *jobs);
 
     virtual ~QuitCommand() {
@@ -249,8 +252,6 @@ public:
 
     // TODO: Add extra methods or modify exisitng ones as needed
     int get_max();
-
-    void fg_by_idx(int idx);
 
 };
 
