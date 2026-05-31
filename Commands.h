@@ -73,6 +73,9 @@ public:
 
 class PipeCommand : public Command {
     // TODO: Add your data members
+private:
+    char* first_command;
+    char* second_command;
 public:
     PipeCommand(const char *cmd_line);
 
@@ -348,7 +351,8 @@ private:
     int input_mode;
     string input;
     string output;
-
+    bool pipe_in;
+    bool pipe_out;
 
 public:
     Command *CreateCommand(const char *cmd_line);
@@ -391,6 +395,14 @@ public:
     string get_input();
 
     string get_output();
+
+    bool get_pipe_in();
+
+    bool get_pipe_out();
+
+    void set_pipe_in(bool input);
+
+    void set_pipe_out(bool input);
 };
 
 

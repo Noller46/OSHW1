@@ -84,9 +84,8 @@ void _removeBackgroundSign(char *cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-SmallShell::SmallShell() : text_prompt("smash> "), last_dir(nullptr), input_mode(0) {
+SmallShell::SmallShell() : text_prompt("smash> "), last_dir(nullptr), input_mode(0), pipe_in(false), pipe_out(false) {
     // TODO: add your implementation
-    input_mode = 0;
     J_list = new JobsList();
 }
 
@@ -124,10 +123,12 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         input_mode = 4;
         input  = _trim(stripped_input.substr(0, error_pipe));
         output = _trim(stripped_input.substr(error_pipe + 1));
+        return new PipeCommand(stripped_input.c_str()); // probably needs to be filtered_line
     } else if (pipe != string::npos) {
         input_mode = 3;
         input  = _trim(stripped_input.substr(0, pipe));
         output = _trim(stripped_input.substr(pipe + 1));
+        return new PipeCommand(stripped_input.c_str()); // probably needs to be filtered_line
     }
 
     char *filtered_line = strdup(cmd_line); //is this good? idk
@@ -249,6 +250,24 @@ string SmallShell::get_input() {
 string SmallShell::get_output() {
     return output;
 }
+
+bool SmallShell::get_pipe_in() {
+    return pipe_in;
+}
+
+bool SmallShell::get_pipe_out() {
+    return pipe_out;
+}
+
+void SmallShell::set_pipe_in(bool input) {
+    pipe_in = input;
+}
+
+void SmallShell::set_pipe_out(bool input) {
+    pipe_out = input;
+}
+
+
 
 
 
@@ -486,6 +505,50 @@ void SysInfoCommand::execute() { // works somehow
     // string str = "smash error: unalias: " + string(name) + " alias does not exist\n";
     // write(1,str.c_str(),str.length());
 }
+
+
+
+PipeCommand::PipeCommand(const char *cmd_line) : Command(cmd_line) {}
+
+void PipeCommand::execute() {
+    const char* pipe_in = SmallShell::getInstance().get_input().c_str();
+    const char* pipe_out = SmallShell::getInstance().get_output().c_str();
+
+    int fd[2];
+    pipe(fd);
+
+    pid_t pid_in = fork();
+    if (pid_in == 0) { // first son - writer
+        if (SmallShell::getInstance().get_input_mode() == 3) {
+            dup2(fd[1], 1);
+        } else {
+            dup2(fd[2], 2);
+        }
+        close(fd[0]);
+        close(fd[1]);
+        setpgrp();
+
+        Command* cmd = SmallShell::getInstance().CreateCommand(pipe_in);
+        cmd->execute();
+        exit(0);
+    }
+    pid_t pid_out = fork();
+    if (pid_out == 0) { // second son - reader
+        dup2(fd[0], 0);
+        close(fd[0]);
+        close(fd[1]);
+        setpgrp();
+
+        Command* cmd = SmallShell::getInstance().CreateCommand(pipe_out);
+        cmd->execute();
+        exit(0);
+    }
+    close(fd[0]);
+    close(fd[1]);
+    waitpid(pid_in,  nullptr, 0);
+    waitpid(pid_out, nullptr, 0);
+}
+
 
 
 Command::Command(const char* cmd_line): og_line(cmd_line) {
