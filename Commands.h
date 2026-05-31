@@ -169,8 +169,6 @@ public:
 
 //only after background
 class JobsList;
-class JobsEntry;
-
 
 //only after background
 class QuitCommand : public BuiltInCommand {
@@ -185,28 +183,37 @@ class QuitCommand : public BuiltInCommand {
 
 //only after background
 class JobsList {
-    JobsEntry* init;
+public:
+    class JobEntry;
+private:
+    JobEntry* init;
 public:
     class JobEntry {
         // TODO: Add your data members
-        const char * line;
-        pid_t pid;
+        char * line;
+        //pid_t pid;
+    public:
         JobEntry* next;
         JobEntry* prev;
-    public:
-        JobEntry(Command* com): line(com->get_line()) {
+        JobEntry(): line(strdup("aaaaa")) {
             next = this;
             prev = this;
         }
-        JobEntry(const char* line, JobEntry* next): line(line), next(next) {
-            next->prev->next = this;
+
+        JobEntry(Command* com, JobEntry* next): line(strdup(com->get_line())), next(next) {
+            prev = next->prev;
+            this->next = next;
+
+            prev->next = this;
             next->prev = this;
         }
         ~JobEntry() {
             next->prev = prev;
             prev->next = next;
-            delete line;
+            free(line);
         }
+
+        const char* get_line();
     };
 
     // TODO: Add your data members
@@ -337,7 +344,7 @@ private:
     string text_prompt;
     char* last_dir;
     vector<tuple<string, string, string>> alias_list;
-    JobsList* init;
+    JobsList* J_list;
     int input_mode;
     string input;
     string output;
@@ -375,9 +382,7 @@ public:
 
     bool remove_alias(string alias);
 
-    void add_job(const char *cmd_line);
-
-    void remove_job(const char *cmd_line);
+    void add_job(Command* com);
 
     int get_input_mode();
 
