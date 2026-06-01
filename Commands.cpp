@@ -175,9 +175,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("unalias") == 0) {
         return new UnAliasCommand(filtered_line);
     }
-    // if (firstWord.compare("unsetenv") == 0) {
-    //     return new UnSetEnvCommand(cmd_line);
-    // }
+    if (firstWord.compare("unsetenv") == 0) {
+        return new UnSetEnvCommand(filtered_line);
+    }
     if (firstWord.compare("sysinfo") == 0) {
         return new SysInfoCommand(filtered_line);
     }
@@ -433,10 +433,64 @@ void UnAliasCommand::execute() {
     }
 }
 
-UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
 
 void UnSetEnvCommand::execute() {
+    char** args = new char*[COMMAND_MAX_ARGS];
+    int size = _parseCommandLine(cmd_line, args);
 
+    if (size == 1) {
+        string str = "smash error: unsetenv: not enough arguments\n";
+        write(2,str.c_str(),str.length());
+        return;
+    }
+
+    int pid = getpid();
+    string buff = "";
+    string environment_file = "/proc/" + to_string(pid) + "/environ";
+
+
+    int file_open = open(environment_file.c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
+    if (file_open == -1) {
+        perror("smash error: open failed");
+        return;
+    }
+
+    vector<char> temp;
+    char buffer[1000];
+    int file_read = 1; // 1 is arbiturary
+    while (file_read > 0) {
+        //cout << "while ,";
+        file_read = read(file_open, buffer, 1000);
+        //cout << "read" << endl;
+        if (file_read == -1) {
+            perror("smash error: read failed");
+            return;
+        }
+        for (int i = 0; i < file_read; i++)
+        {
+            //cout << "for, ";
+            if (buffer[i] != '\0') {
+                temp.push_back(buffer[i]);
+            } else {
+                //cout << "(\\.0)" << endl;
+                string key_value(temp.begin(), temp.end());
+                key_value_vector.push_back(key_value); // maybe key_value_vector.push_back(temp.data()); possible and better
+                temp.clear();
+            }
+        }
+    }
+    close(file_open);
+    for (int j = 0; j < key_value_vector.size(); j++)
+    {
+        cout << key_value_vector[j] << endl;
+    }
+
+    // reads the file from open/proc/<pid>/environ and adds key-value pairs to the vector
+
+    // for every argument in args, check if its in the vector
+
+    // remove the key-values in open/proc/<pid>/environ using char **__environ array
 }
 
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}

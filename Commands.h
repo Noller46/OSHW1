@@ -334,6 +334,9 @@ public:
 };
 
 class UnSetEnvCommand : public BuiltInCommand {
+private:
+    const char* cmd_line;
+    vector<string> key_value_vector;
 public:
     UnSetEnvCommand(const char *cmd_line);
 
