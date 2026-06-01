@@ -19,6 +19,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pwd.h>
+//#include <bits/valarray_before.h>
 
 using namespace std;
 
@@ -433,11 +434,12 @@ void UnAliasCommand::execute() {
     }
 }
 
-UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd_line(cmd_line) {}
+UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) :
+BuiltInCommand(cmd_line), cmd_line(cmd_line), size(0), args(nullptr) {}
 
 void UnSetEnvCommand::execute() {
-    char** args = new char*[COMMAND_MAX_ARGS];
-    int size = _parseCommandLine(cmd_line, args);
+    args = new char*[COMMAND_MAX_ARGS];
+    size = _parseCommandLine(cmd_line, args);
 
     if (size == 1) {
         string str = "smash error: unsetenv: not enough arguments\n";
@@ -455,11 +457,12 @@ void UnSetEnvCommand::execute() {
         return;
     }
 
+    // separate key_values to vector
     vector<char> temp;
-    char buffer[1000];
+    char buffer[1024];
     int file_read = 1; // 1 is arbiturary
     while (file_read > 0) {
-        file_read = read(file_open, buffer, 1000);
+        file_read = read(file_open, buffer, 1024);
         if (file_read == -1) {
             perror("smash error: read failed");
             return;
@@ -470,7 +473,7 @@ void UnSetEnvCommand::execute() {
                 temp.push_back(buffer[i]);
             } else {
                 string key_value(temp.begin(), temp.end());
-                key_value_vector.push_back(key_value); // maybe key_value_vector.push_back(temp.data()); possible and better
+                key_value_vector.push_back(key_value);
                 temp.clear();
             }
         }
@@ -478,31 +481,7 @@ void UnSetEnvCommand::execute() {
     close(file_open);
 
     // for every argument in args, check if its in the vector
-
-    bool found = false;
-    for (int i = 1; i < size; i++) {
-        string key = string(args[i]);
-        found = false;
-
-        for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
-            if (it->find(key + "=") == 0) {
-                cout << "remove key: " << *it << endl;
-                found = true;
-                break;
-            }
-            found = false;
-        }
-
-        if (!found) {
-            string str = "smash error: unsetenv: " + key + " does not exist\n";
-            write(2,str.c_str(),str.length());
-            return;
-        }
-    }
-
-    // remove the key-values in open/proc/<pid>/environ using char **__environ array
-
-
+    find_and_remove_env();
 }
 
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
@@ -841,4 +820,41 @@ unsigned long long calc_size(const char* path) {
     }
     closedir(dir);
     return total;
+}
+
+void UnSetEnvCommand::find_and_remove_env() {
+    bool found = false;
+    for (int i = 1; i < size; i++) {
+        string key = string(args[i]);
+        found = false;
+
+        for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+            if (it->find(key + "=") == 0) {
+                cout << "remove key: " << *it << endl;
+                shift_left((*it).c_str()); // removes the variable from __environment
+                found = true;
+                break;
+            }
+            found = false;
+        }
+
+        if (!found) {
+            string str = "smash error: unsetenv: " + key + " does not exist\n";
+            write(2,str.c_str(),str.length());
+            return;
+        }
+    }
+}
+
+void shift_left(const char* variable) {
+    extern char **__environ;
+
+    for (int i = 0; __environ[i] != nullptr; i++) {
+        if (variable == string(__environ[i])) {
+            for (int j = i; __environ[j] != nullptr; j++) {
+                __environ[j] = __environ[j + 1];
+            }
+            break;
+        }
+    }
 }

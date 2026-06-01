@@ -337,6 +337,8 @@ class UnSetEnvCommand : public BuiltInCommand {
 private:
     const char* cmd_line;
     vector<string> key_value_vector;
+    int size;
+    char** args;
 public:
     UnSetEnvCommand(const char *cmd_line);
 
@@ -344,6 +346,8 @@ public:
     }
 
     void execute() override;
+
+    void find_and_remove_env();
 };
 
 class SysInfoCommand : public BuiltInCommand {
@@ -430,6 +434,8 @@ public:
 string replace_first_word(const char* cmd_line, string command);
 
 unsigned long long calc_size(const char* path);
+
+void shift_left(const char* variable);
 
 
 #endif //SMASH_COMMAND_H_
