@@ -361,6 +361,8 @@ public:
 };
 
 class SysInfoCommand : public BuiltInCommand {
+private:
+    vector<string> key_value_vector;
 public:
     SysInfoCommand(const char *cmd_line);
 
@@ -448,6 +450,8 @@ unsigned long long calc_size(const char* path);
 void shift_left(const char* variable);
 
 void find_key_values_in_env(const char* cmd_line, char** args, int size, vector<string> key_value_vector);
+
+string getKernelOsName();
 
 
 #endif //SMASH_COMMAND_H_

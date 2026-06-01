@@ -37,25 +37,25 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_EXIT()
 #endif
 
-string _ltrim(const std::string &s) {
+string _ltrim(const string &s) {
     size_t start = s.find_first_not_of(WHITESPACE);
-    return (start == std::string::npos) ? "" : s.substr(start);
+    return (start == string::npos) ? "" : s.substr(start);
 }
 
-string _rtrim(const std::string &s) {
+string _rtrim(const string &s) {
     size_t end = s.find_last_not_of(WHITESPACE);
-    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+    return (end == string::npos) ? "" : s.substr(0, end + 1);
 }
 
-string _trim(const std::string &s) {
+string _trim(const string &s) {
     return _rtrim(_ltrim(s));
 }
 
 int _parseCommandLine(const char *cmd_line, char **args) {
     FUNC_ENTRY()
     int i = 0;
-    std::istringstream iss(_trim(string(cmd_line)).c_str());
-    for (std::string s; iss >> s;) {
+    istringstream iss(_trim(string(cmd_line)).c_str());
+    for (string s; iss >> s;) {
         args[i] = (char *) malloc(s.length() + 1);
         memset(args[i], 0, s.length() + 1);
         strcpy(args[i], s.c_str());
@@ -88,7 +88,7 @@ void _removeBackgroundSign(char *cmd_line) {
     cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-// TODO: Add your implementation for classes in Commands.h 
+// TODO: Add your implementation for classes in Commands.h
 
 SmallShell::SmallShell() : text_prompt("smash> "), last_dir(nullptr), input_mode(0) /*pipe_in(false), pipe_out(false)*/ {
     // TODO: add your implementation
@@ -496,14 +496,120 @@ void UnSetEnvCommand::execute() {
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void SysInfoCommand::execute() { // works somehow
-    struct utsname info;
-    uname(&info);
+    string system; string hostname; string kernel; string architecture; string boot_time;
+    string* path = new string[6];
+    int pid = getpid();
+    string buff = "";
+    path[0] = "/proc/sys/kernel/ostype";
+    path[1] = "/proc/sys/kernel/hostname";
+    path[2] = "/proc/sys/kernel/osrelease";
+    path[3] = "/proc/stat";
+    path[4] = "/proc/" + to_string(pid) + "/environ";
 
-    string str = "System: " + string(info.sysname) + "\n";
-    str += "Hostname: " + string(info.nodename) + "\n";
-    str += "Kernel: " + string(info.release) + "\n";
-    str += "Machine: " + string(info.machine) + "\n";
-    write(1,str.c_str(),str.length());
+    for (int i = 0; i < 3; i++)
+    {
+        int file_open = open(path[i].c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
+        if (file_open == -1) {
+            perror("smash error: open failed");
+            return;
+        }
+
+        string content;
+        char buffer[1024];
+
+        int bytes;
+        while ((bytes = read(file_open, buffer, sizeof(buffer))) > 0) {
+            content.append(buffer, bytes);
+        }
+        if (i == 0) {
+            system = content;
+        } else if (i == 1) {
+            hostname = content;
+        } else {
+            kernel = content;
+        }
+
+        close(file_open);
+    }
+
+    char seperator = '\n';
+    for (int i = 3; i < 5; i++) {
+        int file_open = open(path[i].c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
+        if (file_open == -1) {
+            perror("smash error: open failed");
+            return;
+        }
+        if (i == 4) {
+            seperator = '\0';
+        }
+
+        // separate key_values to vector
+        vector<char> temp;
+        char buffer[1024];
+        int file_read = 1; // 1 is arbiturary
+        while (file_read > 0) {
+            file_read = read(file_open, buffer, 1024);
+            if (file_read == -1) {
+                perror("smash error: read failed");
+                return;
+            }
+            for (int i = 0; i < file_read; i++) {
+                if (buffer[i] != seperator) {
+                    temp.push_back(buffer[i]);
+                } else {
+                    string key_value(temp.begin(), temp.end());
+                    key_value_vector.push_back(key_value);
+                    temp.clear();
+                }
+            }
+        }
+        close(file_open);
+
+        if (i == 4) {
+            for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+                if (it->find( "HOSTTYPE=") == 0) {
+                    architecture = *it + "\n";
+                    break;
+                }
+            }
+        } else {
+            for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+                if (it->find( "btime") == 0) {
+                    boot_time = *it + "\n";
+                    break;
+                }
+            }
+        }
+
+        key_value_vector.clear();
+    }
+
+    string architecture_value = "Architecture: ";
+    size_t pos = architecture.find("=");
+    if (pos != string::npos) {
+        architecture_value += architecture.substr(pos + 1);
+    }
+    string boot_time_value = "Boot Time: ";
+    pos = boot_time.find(" ");
+    if (pos != string::npos) {
+        time_t time = stoi(boot_time.substr(pos + 1));
+        string actual_time = ctime(&time);
+        boot_time_value += actual_time;
+    }
+
+    // cout << "boot_time_value before: " << boot_time_value << endl;
+    // boot_time_value += actual_time;
+    // cout << "actual time: " << actual_time << endl;
+    // cout << "boot_time_value after: " << boot_time_value << endl;
+    string system_value = "System: " + system;
+    string hostname_value = "Hostname: " + hostname;
+    string kernel_value = "Kernel: " + kernel;
+
+    write(1,system_value.c_str(),system_value.length());
+    write(1,hostname_value.c_str(),hostname_value.length());
+    write(1,kernel_value.c_str(),kernel_value.length());
+    write(1,architecture_value.c_str(),architecture_value.length());
+    write(1,boot_time_value.c_str(),boot_time_value.length());
 }
 
 
@@ -612,9 +718,6 @@ WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line),cmd_line(
 
 void WhoAmICommand::execute() {
     //find_key_values_in_env(cmd_line, args, size, key_value_vector);
-    args = new char*[COMMAND_MAX_ARGS];
-    size = _parseCommandLine(cmd_line, args);
-
     int pid = getpid();
     string buff = "";
     string environment_file = "/proc/" + to_string(pid) + "/environ";
@@ -655,7 +758,6 @@ void WhoAmICommand::execute() {
             break;
         }
     }
-
     string home_directory;
     for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
         if (it->find( "HOME=") == 0) {
@@ -667,14 +769,12 @@ void WhoAmICommand::execute() {
     string username_value;
     string home_directory_value;
 
-
     size_t pos = username.find("=");
-    if (pos != std::string::npos) {
+    if (pos != string::npos) {
         username_value = username.substr(pos + 1);
     }
-
     pos = home_directory.find("=");
-    if (pos != std::string::npos) {
+    if (pos != string::npos) {
         home_directory_value = home_directory.substr(pos + 1);
     }
 
@@ -993,3 +1093,31 @@ void shift_left(const char* variable) {
 //     }
 //     close(file_open);
 // }
+
+
+string getKernelOsName() {
+    int fd = open("/proc/sys/kernel/ostype", O_RDONLY);
+    if (fd == -1) {
+        return "";
+    }
+
+    char buf[128];
+    ssize_t n = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+
+    if (n <= 0) {
+        return "";
+    }
+
+    buf[n] = '\0';
+
+    string s(buf);
+
+    // remove trailing newline if present
+    if (!s.empty() && s.back() == '\n') {
+        s.pop_back();
+    }
+
+    return s;
+}
+
