@@ -449,7 +449,6 @@ void UnSetEnvCommand::execute() {
     string buff = "";
     string environment_file = "/proc/" + to_string(pid) + "/environ";
 
-
     int file_open = open(environment_file.c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
     if (file_open == -1) {
         perror("smash error: open failed");
@@ -460,20 +459,16 @@ void UnSetEnvCommand::execute() {
     char buffer[1000];
     int file_read = 1; // 1 is arbiturary
     while (file_read > 0) {
-        //cout << "while ,";
         file_read = read(file_open, buffer, 1000);
-        //cout << "read" << endl;
         if (file_read == -1) {
             perror("smash error: read failed");
             return;
         }
         for (int i = 0; i < file_read; i++)
         {
-            //cout << "for, ";
             if (buffer[i] != '\0') {
                 temp.push_back(buffer[i]);
             } else {
-                //cout << "(\\.0)" << endl;
                 string key_value(temp.begin(), temp.end());
                 key_value_vector.push_back(key_value); // maybe key_value_vector.push_back(temp.data()); possible and better
                 temp.clear();
@@ -481,16 +476,33 @@ void UnSetEnvCommand::execute() {
         }
     }
     close(file_open);
-    for (int j = 0; j < key_value_vector.size(); j++)
-    {
-        cout << key_value_vector[j] << endl;
-    }
-
-    // reads the file from open/proc/<pid>/environ and adds key-value pairs to the vector
 
     // for every argument in args, check if its in the vector
 
+    bool found = false;
+    for (int i = 1; i < size; i++) {
+        string key = string(args[i]);
+        found = false;
+
+        for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+            if (it->find(key + "=") == 0) {
+                cout << "remove key: " << *it << endl;
+                found = true;
+                break;
+            }
+            found = false;
+        }
+
+        if (!found) {
+            string str = "smash error: unsetenv: " + key + " does not exist\n";
+            write(2,str.c_str(),str.length());
+            return;
+        }
+    }
+
     // remove the key-values in open/proc/<pid>/environ using char **__environ array
+
+
 }
 
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
