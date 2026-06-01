@@ -514,22 +514,35 @@ void SysInfoCommand::execute() { // works somehow
             return;
         }
 
-        string content;
+        string str;
         char buffer[1024];
 
-        int bytes;
-        while ((bytes = read(file_open, buffer, sizeof(buffer))) > 0) {
-            content.append(buffer, bytes);
+        int check;
+        while (true) {
+            check = read(file_open, buffer, 1024);
+            if (check == 0) {
+                break;
+            }
+            if (check == -1) {
+                perror("smash error: read failed");
+                return;
+            }
+            str.append(buffer, check);
         }
+
         if (i == 0) {
-            system = content;
+            system = str;
         } else if (i == 1) {
-            hostname = content;
+            hostname = str;
         } else {
-            kernel = content;
+            kernel = str;
         }
 
         close(file_open);
+        if (file_open == -1) {
+            perror("smash error: close failed");
+            return;
+        }
     }
 
     char seperator = '\n';
@@ -564,6 +577,10 @@ void SysInfoCommand::execute() { // works somehow
             }
         }
         close(file_open);
+        if (file_open == -1) {
+            perror("smash error: close failed");
+            return;
+        }
 
         if (i == 4) {
             for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
@@ -589,6 +606,7 @@ void SysInfoCommand::execute() { // works somehow
     if (pos != string::npos) {
         architecture_value += architecture.substr(pos + 1);
     }
+
     string boot_time_value = "Boot Time: ";
     pos = boot_time.find(" ");
     if (pos != string::npos) {
@@ -597,10 +615,6 @@ void SysInfoCommand::execute() { // works somehow
         boot_time_value += actual_time;
     }
 
-    // cout << "boot_time_value before: " << boot_time_value << endl;
-    // boot_time_value += actual_time;
-    // cout << "actual time: " << actual_time << endl;
-    // cout << "boot_time_value after: " << boot_time_value << endl;
     string system_value = "System: " + system;
     string hostname_value = "Hostname: " + hostname;
     string kernel_value = "Kernel: " + kernel;
@@ -1093,31 +1107,3 @@ void shift_left(const char* variable) {
 //     }
 //     close(file_open);
 // }
-
-
-string getKernelOsName() {
-    int fd = open("/proc/sys/kernel/ostype", O_RDONLY);
-    if (fd == -1) {
-        return "";
-    }
-
-    char buf[128];
-    ssize_t n = read(fd, buf, sizeof(buf) - 1);
-    close(fd);
-
-    if (n <= 0) {
-        return "";
-    }
-
-    buf[n] = '\0';
-
-    string s(buf);
-
-    // remove trailing newline if present
-    if (!s.empty() && s.back() == '\n') {
-        s.pop_back();
-    }
-
-    return s;
-}
-
