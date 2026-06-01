@@ -253,6 +253,8 @@ public:
     // TODO: Add extra methods or modify exisitng ones as needed
     int get_max();
 
+    pid_t get_pid_by_id(int jobId);
+
 };
 
 //only after background
@@ -271,6 +273,9 @@ public:
 //only after background
 class KillCommand : public BuiltInCommand {
     // TODO: Add your data members
+    pid_t pid;
+    int job_id;
+    int sig;
 public:
     KillCommand(const char *cmd_line, JobsList *jobs);
 

@@ -16,6 +16,7 @@
 #include <sys/types.h> // shown in power point, may not be necessary
 #include <signal.h> // shown in power point, may not be necessary
 //#include <sys/statvfs.h> // might be illegal
+#include <complex>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pwd.h>
@@ -164,9 +165,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("quit") == 0) {
          return new QuitCommand(cmd_line, jobs);
     }
-    // if (firstWord.compare("kill") == 0) {
-    //     return new KillCommand(cmd_line, jobs);
-    // }
+    if (firstWord.compare("kill") == 0) {
+        return new KillCommand(cmd_line, jobs);
+    }
     if (firstWord.compare("alias") == 0) {
         return new AliasCommand(filtered_line);
     }
@@ -763,7 +764,6 @@ void JobsList::removeJobById(int jobId) {
         trav = trav->next;
     }
     waitpid(trav->get_pid(),  nullptr, 0);
-
 }
 
 void ForegroundCommand::execute() {
@@ -800,6 +800,29 @@ void JobsList::killAllJobs() {
         trav = trav->next;
     }
 }
+
+KillCommand::KillCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line) {
+    char *filtered_line = strdup(cmd_line);
+    if (_isBackgroundComamnd(filtered_line)) _removeBackgroundSign(filtered_line);
+    char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
+    _parseCommandLine(filtered_line, aug);
+    pid = jobs->get_pid_by_id(atoi(aug[2]));
+    sig = -1 * atoi(aug[1]);
+}
+
+pid_t JobsList::get_pid_by_id(int jobId) {
+    JobEntry* trav = init;
+    while (jobId > 0) {
+        jobId --;
+        trav = trav->next;
+    }
+    return trav->get_pid();
+}
+
+void KillCommand::execute() {
+    kill(pid, sig);
+}
+
 
 
 
