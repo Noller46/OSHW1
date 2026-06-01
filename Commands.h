@@ -98,6 +98,11 @@ public:
 };
 
 class WhoAmICommand : public Command {
+private:
+    const char* cmd_line;
+    vector<string> key_value_vector;
+    int size;
+    char** args;
 public:
     WhoAmICommand(const char *cmd_line);
 
@@ -441,6 +446,8 @@ string replace_first_word(const char* cmd_line, string command);
 unsigned long long calc_size(const char* path);
 
 void shift_left(const char* variable);
+
+void find_key_values_in_env(const char* cmd_line, char** args, int size, vector<string> key_value_vector);
 
 
 #endif //SMASH_COMMAND_H_
