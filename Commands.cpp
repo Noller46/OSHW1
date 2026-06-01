@@ -673,15 +673,31 @@ void JobsList::removeFinishedJobs() {
         curr = next;
     }
 }
-
+/*
+string str = "smash error: cd: OLDPWD not set\n";
+write(2,str.c_str(),str.length());
+*/
 ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line) {
     char *filtered_line = strdup(cmd_line);
     if (_isBackgroundComamnd(filtered_line)) _removeBackgroundSign(filtered_line);
     char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
     _parseCommandLine(filtered_line, aug);
+
+    if (aug[2] != NULL) {
+        string str = "smash error: fg: invalid arguments\n";
+        write(2,str.c_str(),str.length());
+    }
     if (aug[1] == NULL) {
+        if (jobs->get_max() == 0) {
+            string str = "smash error: fg: jobs list is empty\n";
+            write(2,str.c_str(),str.length());
+        }
         idx = jobs->get_max();
     } else {
+        if (atoi(aug[1]) > jobs->get_max() || atoi(aug[1]) <= 0) {
+            string str = "smash error: fg: job-id <job-id> does not exist\n";
+            write(2,str.c_str(),str.length());
+        }
         idx = atoi(aug[1]);
     }
     jobl = jobs;
@@ -736,6 +752,14 @@ KillCommand::KillCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(c
     if (_isBackgroundComamnd(filtered_line)) _removeBackgroundSign(filtered_line);
     char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
     _parseCommandLine(filtered_line, aug);
+    if (aug[1] == NULL || aug[2] == NULL || aug[3] != NULL) {
+        string str = "smash error: kill: invalid arguments\n";
+        write(2,str.c_str(),str.length());
+    }
+    if (atoi(aug[1]) > jobs->get_max() || atoi(aug[1]) <= 0) {
+        string str = "smash error: kill: job-id <job-id> does not exist\n";
+        write(2,str.c_str(),str.length());
+    }
     pid = jobs->get_pid_by_id(atoi(aug[2]));
     sig = -1 * atoi(aug[1]);
 }
