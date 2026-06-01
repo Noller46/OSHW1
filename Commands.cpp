@@ -20,6 +20,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pwd.h>
+//#include <bits/valarray_before.h>
 
 using namespace std;
 
@@ -36,25 +37,25 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_EXIT()
 #endif
 
-string _ltrim(const std::string &s) {
+string _ltrim(const string &s) {
     size_t start = s.find_first_not_of(WHITESPACE);
-    return (start == std::string::npos) ? "" : s.substr(start);
+    return (start == string::npos) ? "" : s.substr(start);
 }
 
-string _rtrim(const std::string &s) {
+string _rtrim(const string &s) {
     size_t end = s.find_last_not_of(WHITESPACE);
-    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+    return (end == string::npos) ? "" : s.substr(0, end + 1);
 }
 
-string _trim(const std::string &s) {
+string _trim(const string &s) {
     return _rtrim(_ltrim(s));
 }
 
 int _parseCommandLine(const char *cmd_line, char **args) {
     FUNC_ENTRY()
     int i = 0;
-    std::istringstream iss(_trim(string(cmd_line)).c_str());
-    for (std::string s; iss >> s;) {
+    istringstream iss(_trim(string(cmd_line)).c_str());
+    for (string s; iss >> s;) {
         args[i] = (char *) malloc(s.length() + 1);
         memset(args[i], 0, s.length() + 1);
         strcpy(args[i], s.c_str());
@@ -87,7 +88,7 @@ void _removeBackgroundSign(char *cmd_line) {
     cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-// TODO: Add your implementation for classes in Commands.h 
+// TODO: Add your implementation for classes in Commands.h
 
 SmallShell::SmallShell() : text_prompt("smash> "), last_dir(nullptr), input_mode(0) /*pipe_in(false), pipe_out(false)*/ {
     // TODO: add your implementation
@@ -176,9 +177,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("unalias") == 0) {
         return new UnAliasCommand(filtered_line);
     }
-    // if (firstWord.compare("unsetenv") == 0) {
-    //     return new UnSetEnvCommand(cmd_line);
-    // }
+    if (firstWord.compare("unsetenv") == 0) {
+        return new UnSetEnvCommand(filtered_line);
+    }
     if (firstWord.compare("sysinfo") == 0) {
         return new SysInfoCommand(filtered_line);
     }
@@ -434,23 +435,195 @@ void UnAliasCommand::execute() {
     }
 }
 
-UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+UnSetEnvCommand::UnSetEnvCommand(const char *cmd_line) :
+BuiltInCommand(cmd_line), cmd_line(cmd_line), size(0), args(nullptr) {}
 
 void UnSetEnvCommand::execute() {
+    args = new char*[COMMAND_MAX_ARGS];
+    size = _parseCommandLine(cmd_line, args);
+
+    if (size == 1) {
+        string str = "smash error: unsetenv: not enough arguments\n";
+        write(2,str.c_str(),str.length());
+        return;
+    }
+
+    int pid = getpid();
+    string buff = "";
+    string environment_file = "/proc/" + to_string(pid) + "/environ";
+
+    int file_open = open(environment_file.c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
+    if (file_open == -1) {
+        perror("smash error: open failed");
+        return;
+    }
+
+    // separate key_values to vector
+    vector<char> temp;
+    char buffer[1024];
+    int file_read = 1; // 1 is arbiturary
+    while (file_read > 0) {
+        file_read = read(file_open, buffer, 1024);
+        if (file_read == -1) {
+            perror("smash error: read failed");
+            return;
+        }
+        for (int i = 0; i < file_read; i++)
+        {
+            if (buffer[i] != '\0') {
+                temp.push_back(buffer[i]);
+            } else {
+                string key_value(temp.begin(), temp.end());
+                key_value_vector.push_back(key_value);
+                temp.clear();
+            }
+        }
+    }
+    close(file_open);
+
+    //find_key_values_in_env(cmd_line, args, size, key_value_vector);
+
+    // for every argument in args, check if its in the vector
+    find_and_remove_env();
+
+    // extern char **__environ;
+    // for (char** env = __environ; *env != nullptr; ++env) {
+    //     cout << *env << endl;
+    // }
 
 }
 
 SysInfoCommand::SysInfoCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void SysInfoCommand::execute() { // works somehow
-    struct utsname info;
-    uname(&info);
+    string system; string hostname; string kernel; string architecture; string boot_time;
+    string* path = new string[6];
+    int pid = getpid();
+    string buff = "";
+    path[0] = "/proc/sys/kernel/ostype";
+    path[1] = "/proc/sys/kernel/hostname";
+    path[2] = "/proc/sys/kernel/osrelease";
+    path[3] = "/proc/stat";
+    path[4] = "/proc/" + to_string(pid) + "/environ";
 
-    string str = "System: " + string(info.sysname) + "\n";
-    str += "Hostname: " + string(info.nodename) + "\n";
-    str += "Kernel: " + string(info.release) + "\n";
-    str += "Machine: " + string(info.machine) + "\n";
-    write(1,str.c_str(),str.length());
+    for (int i = 0; i < 3; i++)
+    {
+        int file_open = open(path[i].c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
+        if (file_open == -1) {
+            perror("smash error: open failed");
+            return;
+        }
+
+        string str;
+        char buffer[1024];
+
+        int check;
+        while (true) {
+            check = read(file_open, buffer, 1024);
+            if (check == 0) {
+                break;
+            }
+            if (check == -1) {
+                perror("smash error: read failed");
+                return;
+            }
+            str.append(buffer, check);
+        }
+
+        if (i == 0) {
+            system = str;
+        } else if (i == 1) {
+            hostname = str;
+        } else {
+            kernel = str;
+        }
+
+        close(file_open);
+        if (file_open == -1) {
+            perror("smash error: close failed");
+            return;
+        }
+    }
+
+    char seperator = '\n';
+    for (int i = 3; i < 5; i++) {
+        int file_open = open(path[i].c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
+        if (file_open == -1) {
+            perror("smash error: open failed");
+            return;
+        }
+        if (i == 4) {
+            seperator = '\0';
+        }
+
+        // separate key_values to vector
+        vector<char> temp;
+        char buffer[1024];
+        int file_read = 1; // 1 is arbiturary
+        while (file_read > 0) {
+            file_read = read(file_open, buffer, 1024);
+            if (file_read == -1) {
+                perror("smash error: read failed");
+                return;
+            }
+            for (int i = 0; i < file_read; i++) {
+                if (buffer[i] != seperator) {
+                    temp.push_back(buffer[i]);
+                } else {
+                    string key_value(temp.begin(), temp.end());
+                    key_value_vector.push_back(key_value);
+                    temp.clear();
+                }
+            }
+        }
+        close(file_open);
+        if (file_open == -1) {
+            perror("smash error: close failed");
+            return;
+        }
+
+        if (i == 4) {
+            for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+                if (it->find( "HOSTTYPE=") == 0) {
+                    architecture = *it + "\n";
+                    break;
+                }
+            }
+        } else {
+            for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+                if (it->find( "btime") == 0) {
+                    boot_time = *it + "\n";
+                    break;
+                }
+            }
+        }
+
+        key_value_vector.clear();
+    }
+
+    string architecture_value = "Architecture: ";
+    size_t pos = architecture.find("=");
+    if (pos != string::npos) {
+        architecture_value += architecture.substr(pos + 1);
+    }
+
+    string boot_time_value = "Boot Time: ";
+    pos = boot_time.find(" ");
+    if (pos != string::npos) {
+        time_t time = stoi(boot_time.substr(pos + 1));
+        string actual_time = ctime(&time);
+        boot_time_value += actual_time;
+    }
+
+    string system_value = "System: " + system;
+    string hostname_value = "Hostname: " + hostname;
+    string kernel_value = "Kernel: " + kernel;
+
+    write(1,system_value.c_str(),system_value.length());
+    write(1,hostname_value.c_str(),hostname_value.length());
+    write(1,kernel_value.c_str(),kernel_value.length());
+    write(1,architecture_value.c_str(),architecture_value.length());
+    write(1,boot_time_value.c_str(),boot_time_value.length());
 }
 
 
@@ -555,23 +728,77 @@ void DiskUsageCommand::execute() {
     write(1, str.c_str(), str.length());
 }
 
-WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line) {}
+WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line),cmd_line(cmd_line), size(0), args(nullptr) {}
 
 void WhoAmICommand::execute() {
-    uid_t user_id = getuid();
-    gid_t group_id = getgid();
-    struct passwd *user_information = getpwuid(user_id);
+    //find_key_values_in_env(cmd_line, args, size, key_value_vector);
+    int pid = getpid();
+    string buff = "";
+    string environment_file = "/proc/" + to_string(pid) + "/environ";
 
-    if (user_information != nullptr) {
-        string str = string(user_information->pw_name) + "\n";
-        write(1, str.c_str(), str.length());
-        str = to_string(user_id) + "\n";
-        write(1, str.c_str(), str.length());
-        str = to_string(group_id) + "\n";
-        write(1, str.c_str(), str.length());
-        str = string(user_information->pw_dir) + "\n";
-        write(1, str.c_str(), str.length());
+    int file_open = open(environment_file.c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
+    if (file_open == -1) {
+        perror("smash error: open failed");
+        return;
     }
+
+    // separate key_values to vector
+    vector<char> temp;
+    char buffer[1024];
+    int file_read = 1; // 1 is arbiturary
+    while (file_read > 0) {
+        file_read = read(file_open, buffer, 1024);
+        if (file_read == -1) {
+            perror("smash error: read failed");
+            return;
+        }
+        for (int i = 0; i < file_read; i++)
+        {
+            if (buffer[i] != '\0') {
+                temp.push_back(buffer[i]);
+            } else {
+                string key_value(temp.begin(), temp.end());
+                key_value_vector.push_back(key_value);
+                temp.clear();
+            }
+        }
+    }
+    close(file_open);
+
+    string username;
+    for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+        if (it->find( "USER=") == 0) {
+            username = *it + "\n";
+            break;
+        }
+    }
+    string home_directory;
+    for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+        if (it->find( "HOME=") == 0) {
+            home_directory = *it + "\n";
+            break;
+        }
+    }
+
+    string username_value;
+    string home_directory_value;
+
+    size_t pos = username.find("=");
+    if (pos != string::npos) {
+        username_value = username.substr(pos + 1);
+    }
+    pos = home_directory.find("=");
+    if (pos != string::npos) {
+        home_directory_value = home_directory.substr(pos + 1);
+    }
+
+    string user_id = to_string(getuid()) + "\n";
+    string group_id = to_string(getgid()) + "\n";
+    write(1, username_value.c_str(), username_value.length());
+    write(1, user_id.c_str(), user_id.length());
+    write(1, group_id.c_str(), group_id.length());
+    write(1, home_directory_value.c_str(), home_directory_value.length());
+
 }
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
@@ -823,3 +1050,84 @@ unsigned long long calc_size(const char* path) {
     closedir(dir);
     return total;
 }
+
+void UnSetEnvCommand::find_and_remove_env() {
+    bool found = false;
+    for (int i = 1; i < size; i++) {
+        string key = string(args[i]);
+        found = false;
+
+        for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
+            if (it->find(key + "=") == 0) {
+                cout << "remove key: " << *it << endl;
+                shift_left((*it).c_str()); // removes the variable from __environment
+                found = true;
+                break;
+            }
+            found = false;
+        }
+
+        if (!found) {
+            string str = "smash error: unsetenv: " + key + " does not exist\n";
+            write(2,str.c_str(),str.length());
+            return;
+        }
+    }
+}
+
+void shift_left(const char* variable) {
+    extern char **__environ;
+
+    for (int i = 0; __environ[i] != nullptr; i++) {
+        if (variable == string(__environ[i])) {
+            for (int j = i; __environ[j] != nullptr; j++) {
+                __environ[j] = __environ[j + 1];
+            }
+            break;
+        }
+    }
+}
+
+// void find_key_values_in_env(const char* cmd_line, char** args, int size, vector<string> key_value_vector) {
+//     args = new char*[COMMAND_MAX_ARGS];
+//     size = _parseCommandLine(cmd_line, args);
+//
+//     if (size == 1) {
+//         string str = "smash error: unsetenv: not enough arguments\n";
+//         write(2,str.c_str(),str.length());
+//         return;
+//     }
+//
+//     int pid = getpid();
+//     string buff = "";
+//     string environment_file = "/proc/" + to_string(pid) + "/environ";
+//
+//     int file_open = open(environment_file.c_str(), O_RDONLY, 0666); // should probably be 0444 or 0222
+//     if (file_open == -1) {
+//         perror("smash error: open failed");
+//         return;
+//     }
+//
+//     // separate key_values to vector
+//     vector<char> temp;
+//     char buffer[1024];
+//     int file_read = 1; // 1 is arbiturary
+//     while (file_read > 0) {
+//         file_read = read(file_open, buffer, 1024);
+//         if (file_read == -1) {
+//             perror("smash error: read failed");
+//             return;
+//         }
+//         for (int i = 0; i < file_read; i++)
+//         {
+//             if (buffer[i] != '\0') {
+//                 temp.push_back(buffer[i]);
+//             } else {
+//                 string key_value(temp.begin(), temp.end());
+//                 key_value_vector.push_back(key_value);
+//                 temp.clear();
+//             }
+//         }
+//     }
+//     close(file_open);
+// }
