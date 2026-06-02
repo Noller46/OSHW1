@@ -952,6 +952,7 @@ void JobsList::removeFinishedJobs() {
         if(result > 0)
         {
             delete curr;
+            max --;
         } else {
             curr->idx = ind;
             ind ++;
@@ -974,7 +975,7 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): Buil
         write(2,str.c_str(),str.length());
         bad = true;
     } else if (aug[1] == NULL) {
-        if (jobs->get_max() == 0) {
+        if (jobs->get_max() <= 0) {
             string str = "smash error: fg: jobs list is empty\n";
             write(2,str.c_str(),str.length());
             bad = true;
@@ -999,16 +1000,23 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): Buil
 
 void ForegroundCommand::execute() {
     if (bad) delete this;
-    jobl->removeJobById(idx);
+    else{jobl->removeJobById(idx, true);}
+
 }
 
-void JobsList::removeJobById(int jobId) {
+void JobsList::removeJobById(int jobId, bool print) {
     JobEntry* trav = init;
     while (jobId > 0) {
         jobId --;
         trav = trav->next;
     }
+    if (print) {
+        string str = string(trav->get_line()) + " " + to_string(trav->get_pid()) + "\n";
+        write(1,str.c_str(),str.length());
+    }
     waitpid(trav->get_pid(),  nullptr, 0);
+    delete trav;
+    max--;
 }
 
 int JobsList::get_max() {
@@ -1021,13 +1029,14 @@ QuitCommand::QuitCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cm
     char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
     _parseCommandLine(filtered_line, aug);
     type2 = false;
-    if (aug[1] == NULL) {
+    if (aug[1] != NULL) {
         type2 = true;
     }
     jobl = jobs;
 }
 
 void QuitCommand::execute() {
+    jobl->removeFinishedJobs();
     if (type2) {
         jobl->killAllJobs();
     }
@@ -1036,8 +1045,12 @@ void QuitCommand::execute() {
 
 void JobsList::killAllJobs() {
     JobEntry* trav = init->next;
+    string str = "smash: sending SIGKILL signal to " + to_string(max) + " jobs:\n";
+    write(1,str.c_str(),str.length());
     while (string(trav->get_line()) != "aaaaa") {
         kill(trav->get_pid(), SIGKILL);
+        str = to_string(trav->get_pid()) + ": " + string(trav->get_line()) +  "\n";
+        write(1,str.c_str(),str.length());
         trav = trav->next;
     }
 }
@@ -1086,38 +1099,6 @@ string replace_first_word(const char* cmd_line, string command) {
     str.replace(0, index, command);
     return str;
 }
-
-// unsigned long long calc_size(const char* path) {
-//     struct stat st;
-//
-//     if (lstat(path, &st) == -1) {
-//         return 0;
-//     }
-//     if (S_ISLNK(st.st_mode)) {
-//         return 0;
-//     }
-//
-//     unsigned long long total = st.st_blocks * 512;
-//     if (S_ISREG(st.st_mode)) { // file
-//         return total;
-//     }
-//     DIR* dir = opendir(path); // directory
-//     if (!dir) {
-//         return total;
-//     }
-//
-//     struct dirent* entry;
-//     while ((entry = readdir(dir)) != nullptr) {
-//         string name = entry->d_name;
-//         if (name == "." || name == "..") {
-//             continue;
-//         }
-//         string child = string(path) + "/" + name;
-//         total += calc_size(child.c_str());
-//     }
-//     closedir(dir);
-//     return total;
-// }
 
 void UnSetEnvCommand::find_and_remove_env() {
     bool found = false;

@@ -13,12 +13,6 @@
 
 using namespace std;
 
-// struct Alias_Node {
-//     string alias;
-//     string command;
-//     Alias_Node *next;
-// };
-
 
 class Command {
     // TODO: Add your data members
@@ -255,7 +249,7 @@ public:
 
     JobEntry *getJobById(int jobId);
 
-    void removeJobById(int jobId);
+    void removeJobById(int jobId, bool print);
 
     JobEntry *getLastJob(int *lastJobId);
 
@@ -452,11 +446,9 @@ public:
 
 string replace_first_word(const char* cmd_line, string command);
 
-unsigned long long calc_size(const char* path);
-
 void shift_left(const char* variable);
 
-void find_key_values_in_env(const char* cmd_line, char** args, int size, vector<string> key_value_vector);
+//void find_key_values_in_env(const char* cmd_line, char** args, int size, vector<string> key_value_vector);
 
 static int display_info(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf);
 
