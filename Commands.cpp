@@ -999,17 +999,20 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): Buil
 
 void ForegroundCommand::execute() {
     if (bad) delete this;
-    jobl->removeJobById(idx);
+    else{jobl->removeJobById(idx, true);}
+
 }
 
-void JobsList::removeJobById(int jobId) {
+void JobsList::removeJobById(int jobId, bool print) {
     JobEntry* trav = init;
     while (jobId > 0) {
         jobId --;
         trav = trav->next;
     }
-    string str = string(trav->get_line()) + to_string(trav->get_pid()) + "\n";
-    write(1,str.c_str(),str.length());
+    if (print) {
+        //string str = string(trav->get_line()) + " " + to_string(trav->get_pid()) + "\n";
+        //write(1,str.c_str(),str.length());
+    }
 
     waitpid(trav->get_pid(),  nullptr, 0);
 }
@@ -1024,7 +1027,7 @@ QuitCommand::QuitCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cm
     char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
     _parseCommandLine(filtered_line, aug);
     type2 = false;
-    if (aug[1] == NULL) {
+    if (aug[1] != NULL) {
         type2 = true;
     }
     jobl = jobs;
@@ -1039,10 +1042,12 @@ void QuitCommand::execute() {
 
 void JobsList::killAllJobs() {
     JobEntry* trav = init->next;
-    //string str = "smash: sending SIKKILL to " + to_string(max) + "jobs";
-    //write(1,str.c_str(),str.length());
+    string str = "smash: sending SIGKILL signal to " + to_string(max) + " jobs:\n";
+    write(1,str.c_str(),str.length());
     while (string(trav->get_line()) != "aaaaa") {
         kill(trav->get_pid(), SIGKILL);
+        str = to_string(trav->get_pid()) + ": " + string(trav->get_line()) +  "\n";
+        write(1,str.c_str(),str.length());
         trav = trav->next;
     }
 }

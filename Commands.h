@@ -255,7 +255,7 @@ public:
 
     JobEntry *getJobById(int jobId);
 
-    void removeJobById(int jobId);
+    void removeJobById(int jobId, bool print);
 
     JobEntry *getLastJob(int *lastJobId);
 
