@@ -952,6 +952,7 @@ void JobsList::removeFinishedJobs() {
         if(result > 0)
         {
             delete curr;
+            max --;
         } else {
             curr->idx = ind;
             ind ++;
@@ -974,7 +975,7 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): Buil
         write(2,str.c_str(),str.length());
         bad = true;
     } else if (aug[1] == NULL) {
-        if (jobs->get_max() == 0) {
+        if (jobs->get_max() <= 0) {
             string str = "smash error: fg: jobs list is empty\n";
             write(2,str.c_str(),str.length());
             bad = true;
@@ -1010,11 +1011,12 @@ void JobsList::removeJobById(int jobId, bool print) {
         trav = trav->next;
     }
     if (print) {
-        //string str = string(trav->get_line()) + " " + to_string(trav->get_pid()) + "\n";
-        //write(1,str.c_str(),str.length());
+        string str = string(trav->get_line()) + " " + to_string(trav->get_pid()) + "\n";
+        write(1,str.c_str(),str.length());
     }
-
     waitpid(trav->get_pid(),  nullptr, 0);
+    delete trav;
+    max--;
 }
 
 int JobsList::get_max() {
@@ -1034,6 +1036,7 @@ QuitCommand::QuitCommand(const char* cmd_line,JobsList* jobs): BuiltInCommand(cm
 }
 
 void QuitCommand::execute() {
+    jobl->removeFinishedJobs();
     if (type2) {
         jobl->killAllJobs();
     }
