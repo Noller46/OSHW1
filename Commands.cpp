@@ -106,6 +106,9 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
+    // string str = "CreateCommand: " + string(cmd_line) + "\n";
+    // write(2,str.c_str(),str.length());
+
     string stripped_input = _trim(string(cmd_line));
     input = stripped_input;
 
@@ -118,7 +121,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
     if (firstWord.compare("alias") == 0) {
-        //cout << "filtered_line: " << filtered_line << "cmd_line: " << cmd_line << endl;
         return new AliasCommand(filtered_line);
     }
 
@@ -205,8 +207,12 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
 
     if (input_mode != 0) {
+        // string str = "///CreateCommand external 1: " + string(input.c_str()) + "\n";
+        // write(2,str.c_str(),str.length());
         return new ExternalCommand(input.c_str());  // just the command part
     } else {
+        // string str = "///CreateCommand external 2: " + string(cmd_line) + "\n";
+        // write(2,str.c_str(),str.length());
         return new ExternalCommand(cmd_line);
     }
 }
@@ -653,25 +659,42 @@ BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 RedirectionCommand::RedirectionCommand(const char* cmd_line) : Command(cmd_line) {}
 
 void RedirectionCommand::execute() {
-    int original_output_channel = dup(1);
-    close(1);
+    //cout << "///RedirectionCommand, input: " << SmallShell::getInstance().get_input() << endl;
+    int original_output_channel = dup(STDOUT_FILENO);
+    int file_open;
+
+    file_open = close(1);
+    if (file_open == -1) {
+        perror("smash error: close failed");
+        exit(1);
+    }
 
     if (SmallShell::getInstance().get_input_mode() == 1) {
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0666);
+        file_open = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0666);
     } else if (SmallShell::getInstance().get_input_mode() == 2) {
-        open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND|O_RDWR, 0666);
+        file_open = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_APPEND|O_RDWR, 0666);
     }
+    if (file_open == -1) {
+        perror("smash error: open failed");
+        exit(1);
+    }
+
+    dup2(file_open, STDOUT_FILENO);
+    close(file_open);
 
     string temp = SmallShell::getInstance().get_input();
     SmallShell::getInstance().set_input_mode(0);
     SmallShell::getInstance().set_input("");
     SmallShell::getInstance().set_output("");
-
+    // string str = "//4//, temp.c_str(): " + temp + "\n";
+    // write(2,str.c_str(),str.length());
     Command* cmd = SmallShell::getInstance().CreateCommand(temp.c_str());
+    //write(2,"//51//\n",6);
     cmd->execute();
+    //write(2,"//52//",5);
     delete cmd;
-
-    dup2(original_output_channel, 1);
+    //write(2,"//5//",5);
+    dup2(original_output_channel, STDOUT_FILENO);
     close(original_output_channel);
 }
 
@@ -740,13 +763,6 @@ void DiskUsageCommand::execute() {
     unsigned long long total_usage = (sum_usage(path) + 1023) / 1024; // this is done to round up to KB
     string str = "Total disk usage: " + to_string(total_usage) + " KB\n";
     write(1, str.c_str(), str.length());
-
-
-
-    // if (nftw(path, display_info, 20, FTW_PHYS) == -1) {
-    //     perror("nftw");
-    //     exit(EXIT_FAILURE);
-    // }
 }
 
 WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line),cmd_line(cmd_line), size(0), args(nullptr) {}
@@ -823,6 +839,9 @@ void WhoAmICommand::execute() {
 }
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
+    //cout << "///EXTERNAL COMMAND//// cmd_line: " << cmd_line << endl;
+    // string str = "///EXTERNAL COMMAND//// cmd_line: " + string(cmd_line) + "\n";
+    // write(2,str.c_str(),str.length());
     is_background = _isBackgroundComamnd(cmd_line);
     my_name = strdup(cmd_line);
 
@@ -848,6 +867,9 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
 void ExternalCommand::execute() {
     pid_t pid = fork();
     if (pid == 0) {
+        // string str = "///EXTERNAL COMMAND//// fork child: args[0]: " + string(args[0]) + ", args[1]:" + string(args[1]) + ", args[2]:" + string(args[2]) + "\n";
+        // write(2,str.c_str(),str.length());
+        args.push_back(nullptr);
         setpgrp();
         execvp(args[0], args.data());
         perror("smash error: execvp failed");
