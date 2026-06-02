@@ -106,8 +106,8 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    // string str = "CreateCommand: " + string(cmd_line) + "\n";
-    // write(2,str.c_str(),str.length());
+    string str = "CreateCommand: " + string(cmd_line) + "\n";
+    write(2,str.c_str(),str.length());
 
     string stripped_input = _trim(string(cmd_line));
     input = stripped_input;
@@ -881,6 +881,7 @@ void ExternalCommand::execute() {
             SmallShell::getInstance().add_job(this, pid);
         }
     }
+
     // your implementation or leave empty for now
 }
 
@@ -910,7 +911,8 @@ void JobsList::addJob(Command* com, pid_t pid, bool baba) {
 void JobsList::printJobsList() {
     JobEntry* trav = init->next;
     while (string(trav->get_line()) != "aaaaa") {
-        cout << "["<< trav->idx << "] " << trav->get_line() << endl;
+        string str = "[" + to_string(trav->idx) + "] " + string(trav->get_line()) + "\n";;
+        write(1,str.c_str(),str.length());
         trav = trav->next;
     }
 }
@@ -943,34 +945,46 @@ void JobsList::removeFinishedJobs() {
         curr = next;
     }
 }
-/*
-string str = "smash error: cd: OLDPWD not set\n";
-write(2,str.c_str(),str.length());
-*/
+
+
 ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line) {
     char *filtered_line = strdup(cmd_line);
     if (_isBackgroundComamnd(filtered_line)) _removeBackgroundSign(filtered_line);
     char* aug[COMMAND_MAX_ARGS + 1] = {nullptr};
     _parseCommandLine(filtered_line, aug);
+    bad = false;
 
     if (aug[2] != NULL) {
         string str = "smash error: fg: invalid arguments\n";
         write(2,str.c_str(),str.length());
-    }
-    if (aug[1] == NULL) {
+        bad = true;
+    } else if (aug[1] == NULL) {
         if (jobs->get_max() == 0) {
             string str = "smash error: fg: jobs list is empty\n";
             write(2,str.c_str(),str.length());
+            bad = true;
         }
         idx = jobs->get_max();
     } else {
-        if (atoi(aug[1]) > jobs->get_max() || atoi(aug[1]) <= 0) {
+        char* end;
+        strtol(aug[1], &end, 10);
+        if (!(*aug[1] != '\0' && *end == '\0')) {
+            string str = "smash error: fg: invalid arguments\n";
+            write(2,str.c_str(),str.length());
+            bad = true;
+        } else if (atoi(aug[1]) > jobs->get_max() || atoi(aug[1]) <= 0) {
             string str = "smash error: fg: job-id <job-id> does not exist\n";
             write(2,str.c_str(),str.length());
+            bad = true;
         }
         idx = atoi(aug[1]);
     }
     jobl = jobs;
+}
+
+void ForegroundCommand::execute() {
+    if (bad) delete this;
+    jobl->removeJobById(idx);
 }
 
 void JobsList::removeJobById(int jobId) {
@@ -980,10 +994,6 @@ void JobsList::removeJobById(int jobId) {
         trav = trav->next;
     }
     waitpid(trav->get_pid(),  nullptr, 0);
-}
-
-void ForegroundCommand::execute() {
-    jobl->removeJobById(idx);
 }
 
 int JobsList::get_max() {
