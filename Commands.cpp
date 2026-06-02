@@ -608,12 +608,17 @@ void SysInfoCommand::execute() { // works somehow
     }
 
     string boot_time_value = "Boot Time: ";
+    time_t time;
+    char formatted_time[20];
+
     pos = boot_time.find(" ");
     if (pos != string::npos) {
-        time_t time = stoi(boot_time.substr(pos + 1));
-        string actual_time = ctime(&time);
-        boot_time_value += actual_time;
+        time = stoi(boot_time.substr(pos + 1));
     }
+
+    strftime(formatted_time, 20, "%Y-%m-%d %H:%M:%S", localtime(&time)); // check exactly what this does
+    string actual_time(formatted_time);
+    boot_time_value += actual_time + "\n";
 
     string system_value = "System: " + system;
     string hostname_value = "Hostname: " + hostname;
@@ -1059,7 +1064,6 @@ void UnSetEnvCommand::find_and_remove_env() {
 
         for (auto it = key_value_vector.begin(); it != key_value_vector.end(); it++) {
             if (it->find(key + "=") == 0) {
-                cout << "remove key: " << *it << endl;
                 shift_left((*it).c_str()); // removes the variable from __environment
                 found = true;
                 break;
