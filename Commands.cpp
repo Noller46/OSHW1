@@ -374,6 +374,16 @@ AliasCommand::AliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd
 void AliasCommand::execute() {
     string stripped_input = _trim(string(SmallShell::getInstance().get_input()));
 
+    // for(char c : string(cmd_line)) {
+    //     cerr << (int)c << ' ';
+    // }
+    // cerr << endl;
+    //
+    // for(char c : string(stripped_input)) {
+    //     cerr << (int)c << ' ';
+    // }
+    // cerr << endl;
+
     if (stripped_input == "alias") {
         write(1,"\n",1);
         for (auto i : SmallShell::getInstance().get_alias_list()) {
@@ -382,7 +392,7 @@ void AliasCommand::execute() {
         }
     } else {
         regex pattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
-        if (regex_match(string(cmd_line), pattern)) {
+        if (regex_match(string(stripped_input), pattern)) {
             string temp = string(stripped_input.substr(6));
             size_t index = temp.find('=');
             size_t before_equal_sign = temp.find('\'', index);
