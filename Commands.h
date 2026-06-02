@@ -388,6 +388,8 @@ private:
     //bool pipe_in;
     //bool pipe_out;
 
+    pid_t curr_pid;
+
 public:
     Command *CreateCommand(const char *cmd_line);
 
@@ -441,6 +443,14 @@ public:
     void set_pipe_in(bool input);
 
     void set_pipe_out(bool input);
+
+    void set_Pid(pid_t pid) {
+        curr_pid = pid;
+    }
+
+    pid_t get_Pid() {
+        return curr_pid;
+    }
 };
 
 

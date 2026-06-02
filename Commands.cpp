@@ -892,10 +892,13 @@ void ExternalCommand::execute() {
         //string str = "///EXTERNAL COMMAND//// fork parent:\n";
         //write(2,str.c_str(),str.length());
         if (!is_background) {
+            SmallShell::getInstance().set_Pid(pid);
             waitpid(pid, nullptr, 0);
+            SmallShell::getInstance().set_Pid(-1);
         } else {
             SmallShell::getInstance().add_job(this, pid);
         }
+
     }
     // str = "///EXTERNAL COMMAND//// end:\n";
     // write(2,str.c_str(),str.length());
