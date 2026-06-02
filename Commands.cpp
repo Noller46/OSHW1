@@ -106,6 +106,9 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
+    // string str = "//CreateCommand//: " + string(cmd_line) + "\n";
+    // write(2,str.c_str(),str.length());
+
     string stripped_input = _trim(string(cmd_line));
     input = stripped_input;
 
@@ -371,6 +374,16 @@ AliasCommand::AliasCommand(const char *cmd_line) : BuiltInCommand(cmd_line), cmd
 void AliasCommand::execute() {
     string stripped_input = _trim(string(SmallShell::getInstance().get_input()));
 
+    // for(char c : string(cmd_line)) {
+    //     cerr << (int)c << ' ';
+    // }
+    // cerr << endl;
+    //
+    // for(char c : string(stripped_input)) {
+    //     cerr << (int)c << ' ';
+    // }
+    // cerr << endl;
+
     if (stripped_input == "alias") {
         write(1,"\n",1);
         for (auto i : SmallShell::getInstance().get_alias_list()) {
@@ -379,7 +392,7 @@ void AliasCommand::execute() {
         }
     } else {
         regex pattern("^alias ([a-zA-Z0-9_]+)='([^']*)'$");
-        if (regex_match(string(cmd_line), pattern)) {
+        if (regex_match(string(stripped_input), pattern)) {
             string temp = string(stripped_input.substr(6));
             size_t index = temp.find('=');
             size_t before_equal_sign = temp.find('\'', index);
@@ -656,15 +669,16 @@ BuiltInCommand::BuiltInCommand(const char* cmd_line) : Command(cmd_line) {}
 RedirectionCommand::RedirectionCommand(const char* cmd_line) : Command(cmd_line) {}
 
 void RedirectionCommand::execute() {
-    //cout << "///RedirectionCommand, input: " << SmallShell::getInstance().get_input() << endl;
+    // string str = "///RedirectionCommand, input: " + SmallShell::getInstance().get_input() + "\n";
+    // write(2,str.c_str(),str.length());
     int original_output_channel = dup(STDOUT_FILENO);
     int file_open;
 
-    file_open = close(1);
-    if (file_open == -1) {
-        perror("smash error: close failed");
-        exit(1);
-    }
+    // file_open = close(1);
+    // if (file_open == -1) {
+    //     perror("smash error: close failed");
+    //     exit(1);
+    // }
 
     if (SmallShell::getInstance().get_input_mode() == 1) {
         file_open = open(SmallShell::getInstance().get_output().c_str(), O_CREAT|O_TRUNC|O_RDWR, 0666);
@@ -836,8 +850,7 @@ void WhoAmICommand::execute() {
 }
 
 ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
-    //cout << "///EXTERNAL COMMAND//// cmd_line: " << cmd_line << endl;
-    // string str = "///EXTERNAL COMMAND//// cmd_line: " + string(cmd_line) + "\n";
+    // string str = "///EXTERNAL COMMAND create//// cmd_line: " + string(cmd_line) + "\n";
     // write(2,str.c_str(),str.length());
     is_background = _isBackgroundComamnd(cmd_line);
     my_name = strdup(cmd_line);
@@ -862,26 +875,31 @@ ExternalCommand::ExternalCommand(const char* cmd_line): Command(cmd_line) {
 }
 
 void ExternalCommand::execute() {
+    // string str = "///EXTERNAL COMMAND execute//// cmd_line:\n";
+    // write(2,str.c_str(),str.length());
     pid_t pid = fork();
     if (pid == 0) {
-        // string str = "///EXTERNAL COMMAND//// fork child: args[0]: " + string(args[0]) + ", args[1]:" + string(args[1]) + ", args[2]:" + string(args[2]) + "\n";
-        // write(2,str.c_str(),str.length());
+        //str = "///EXTERNAL COMMAND//// fork child: args[0]: " + string(args[0]) + ", args[1]:" + string(args[1]) + ", args[2]:" + string(args[2]) + "\n";
+        //write(2,str.c_str(),str.length());
         args.push_back(nullptr);
+        //str = "///EXTERNAL COMMAND//// fork child: args[0]: " + string(args[0]) + ", args[1]:" + string(args[1]) + ", args[2]:" + string(args[2]) + "\n";
+        //write(2,str.c_str(),str.length());
         setpgrp();
         execvp(args[0], args.data());
         perror("smash error: execvp failed");
         exit(1);
     } else if (pid > 0) {
+        //string str = "///EXTERNAL COMMAND//// fork parent:\n";
+        //write(2,str.c_str(),str.length());
         if (!is_background) {
             waitpid(pid, nullptr, 0);
         } else {
             SmallShell::getInstance().add_job(this, pid);
         }
     }
-
-    // your implementation or leave empty for now
+    // str = "///EXTERNAL COMMAND//// end:\n";
+    // write(2,str.c_str(),str.length());
 }
-
 
 
 JobsList::JobsList() {
