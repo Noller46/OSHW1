@@ -106,9 +106,6 @@ SmallShell::~SmallShell() {
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    string str = "CreateCommand: " + string(cmd_line) + "\n";
-    write(2,str.c_str(),str.length());
-
     string stripped_input = _trim(string(cmd_line));
     input = stripped_input;
 
@@ -993,6 +990,9 @@ void JobsList::removeJobById(int jobId) {
         jobId --;
         trav = trav->next;
     }
+    string str = string(trav->get_line()) + to_string(trav->get_pid()) + "\n";
+    write(1,str.c_str(),str.length());
+
     waitpid(trav->get_pid(),  nullptr, 0);
 }
 
@@ -1021,6 +1021,8 @@ void QuitCommand::execute() {
 
 void JobsList::killAllJobs() {
     JobEntry* trav = init->next;
+    //string str = "smash: sending SIKKILL to " + to_string(max) + "jobs";
+    //write(1,str.c_str(),str.length());
     while (string(trav->get_line()) != "aaaaa") {
         kill(trav->get_pid(), SIGKILL);
         trav = trav->next;
