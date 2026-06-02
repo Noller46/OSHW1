@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <pwd.h>
 //#include <bits/valarray_before.h>
+#include <ftw.h>
 
 using namespace std;
 
@@ -36,6 +37,8 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_ENTRY()
 #define FUNC_EXIT()
 #endif
+
+unsigned long long DiskUsageCommand::disk_usage = 0;
 
 string _ltrim(const string &s) {
     size_t start = s.find_first_not_of(WHITESPACE);
@@ -106,6 +109,19 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     string stripped_input = _trim(string(cmd_line));
     input = stripped_input;
 
+    char *filtered_line = strdup(cmd_line); //is this good? idk
+    if (input_mode != 0) {
+        filtered_line = strdup(input.c_str());
+    }
+    if (_isBackgroundComamnd(cmd_line)) _removeBackgroundSign(filtered_line);
+    string cmd_s = _trim(string(filtered_line));
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+
+    if (firstWord.compare("alias") == 0) {
+        //cout << "filtered_line: " << filtered_line << "cmd_line: " << cmd_line << endl;
+        return new AliasCommand(filtered_line);
+    }
+
     // checks for I/O redirection and pipes
     size_t should_not_redirect  = stripped_input.find(">>>"); // may not be needed. if needed, maybe add one for pipes too
     size_t redirect_append = stripped_input.find(">>");
@@ -139,14 +155,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         return new PipeCommand(stripped_input.c_str()); // probably needs to be filtered_line
     }
 
-    char *filtered_line = strdup(cmd_line); //is this good? idk
-    if (input_mode != 0) {
-        filtered_line = strdup(input.c_str());
-    }
-    if (_isBackgroundComamnd(cmd_line)) _removeBackgroundSign(filtered_line);
-    string cmd_s = _trim(string(filtered_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
     if (firstWord.compare("chprompt") == 0) {
         return new ChangePromptCommand(filtered_line);
     }
@@ -171,9 +179,10 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("kill") == 0) {
         return new KillCommand(cmd_line, jobs);
     }
-    if (firstWord.compare("alias") == 0) {
-        return new AliasCommand(filtered_line);
-    }
+    // if (firstWord.compare("alias") == 0) {
+    //     cout << "filtered_line: " << filtered_line << "cmd_line: " << cmd_line << endl;
+    //     return new AliasCommand(filtered_line);
+    // }
     if (firstWord.compare("unalias") == 0) {
         return new UnAliasCommand(filtered_line);
     }
@@ -728,9 +737,16 @@ void DiskUsageCommand::execute() {
         return;
     }
 
-    unsigned long long usage = (calc_size(path) + 1023) / 1024; // this is done to round up to KB
-    string str = "Total disk usage: " + to_string(usage) + " KB\n";
+    unsigned long long total_usage = (sum_usage(path) + 1023) / 1024; // this is done to round up to KB
+    string str = "Total disk usage: " + to_string(total_usage) + " KB\n";
     write(1, str.c_str(), str.length());
+
+
+
+    // if (nftw(path, display_info, 20, FTW_PHYS) == -1) {
+    //     perror("nftw");
+    //     exit(EXIT_FAILURE);
+    // }
 }
 
 WhoAmICommand::WhoAmICommand(const char *cmd_line) : Command(cmd_line),cmd_line(cmd_line), size(0), args(nullptr) {}
@@ -1037,37 +1053,37 @@ string replace_first_word(const char* cmd_line, string command) {
     return str;
 }
 
-unsigned long long calc_size(const char* path) {
-    struct stat st;
-
-    if (lstat(path, &st) == -1) {
-        return 0;
-    }
-    if (S_ISLNK(st.st_mode)) {
-        return 0;
-    }
-
-    unsigned long long total = st.st_blocks * 512;
-    if (S_ISREG(st.st_mode)) { // file
-        return total;
-    }
-    DIR* dir = opendir(path); // directory
-    if (!dir) {
-        return total;
-    }
-
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != nullptr) {
-        string name = entry->d_name;
-        if (name == "." || name == "..") {
-            continue;
-        }
-        string child = string(path) + "/" + name;
-        total += calc_size(child.c_str());
-    }
-    closedir(dir);
-    return total;
-}
+// unsigned long long calc_size(const char* path) {
+//     struct stat st;
+//
+//     if (lstat(path, &st) == -1) {
+//         return 0;
+//     }
+//     if (S_ISLNK(st.st_mode)) {
+//         return 0;
+//     }
+//
+//     unsigned long long total = st.st_blocks * 512;
+//     if (S_ISREG(st.st_mode)) { // file
+//         return total;
+//     }
+//     DIR* dir = opendir(path); // directory
+//     if (!dir) {
+//         return total;
+//     }
+//
+//     struct dirent* entry;
+//     while ((entry = readdir(dir)) != nullptr) {
+//         string name = entry->d_name;
+//         if (name == "." || name == "..") {
+//             continue;
+//         }
+//         string child = string(path) + "/" + name;
+//         total += calc_size(child.c_str());
+//     }
+//     closedir(dir);
+//     return total;
+// }
 
 void UnSetEnvCommand::find_and_remove_env() {
     bool found = false;
@@ -1104,6 +1120,43 @@ void shift_left(const char* variable) {
         }
     }
 }
+
+static int display_info(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf) {
+    (void)fpath;
+    (void)tflag;
+    (void)ftwbuf;
+
+    int amount = (unsigned long long)sb->st_blocks * 512; // this is to ensure a standard size
+    DiskUsageCommand::increase_disk_usage(amount);
+    return 0;
+}
+
+unsigned long long DiskUsageCommand::sum_usage(const char* path) {
+    // struct stat sb;
+    //
+    // if (lstat(path, &sb) == -1) {
+    //     perror("lstat");
+    //     exit(EXIT_FAILURE);
+    // }
+    //
+    // int size = sb.st_size * 512;
+    // cout << size << endl;
+
+
+    disk_usage = 0;
+
+    if (nftw(path, display_info, 10, FTW_PHYS) == -1) {
+        perror("nftw");
+        return 0;
+    }
+
+    return disk_usage;
+}
+
+void DiskUsageCommand::increase_disk_usage(int amount) {
+    disk_usage += amount;
+}
+
 
 // void find_key_values_in_env(const char* cmd_line, char** args, int size, vector<string> key_value_vector) {
 //     args = new char*[COMMAND_MAX_ARGS];
