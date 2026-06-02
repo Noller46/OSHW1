@@ -857,8 +857,6 @@ void ExternalCommand::execute() {
             waitpid(pid, nullptr, 0);
         } else {
             SmallShell::getInstance().add_job(this, pid);
-            //string str = to_string(pid) + ": " + *get_line();
-            //write(1,str.c_str(),str.length());
         }
     }
 
@@ -891,7 +889,8 @@ void JobsList::addJob(Command* com, pid_t pid, bool baba) {
 void JobsList::printJobsList() {
     JobEntry* trav = init->next;
     while (string(trav->get_line()) != "aaaaa") {
-        cout << "["<< trav->idx << "] " << trav->get_line() << endl;
+        string str = "[" + to_string(trav->idx) + "] " + string(trav->get_line()) + "\n";;
+        write(1,str.c_str(),str.length());
         trav = trav->next;
     }
 }
@@ -937,8 +936,7 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): Buil
         string str = "smash error: fg: invalid arguments\n";
         write(2,str.c_str(),str.length());
         bad = true;
-    }
-    if (aug[1] == NULL) {
+    } else if (aug[1] == NULL) {
         if (jobs->get_max() == 0) {
             string str = "smash error: fg: jobs list is empty\n";
             write(2,str.c_str(),str.length());
@@ -952,8 +950,7 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): Buil
             string str = "smash error: fg: invalid arguments\n";
             write(2,str.c_str(),str.length());
             bad = true;
-        }
-        if (atoi(aug[1]) > jobs->get_max() || atoi(aug[1]) <= 0) {
+        } else if (atoi(aug[1]) > jobs->get_max() || atoi(aug[1]) <= 0) {
             string str = "smash error: fg: job-id <job-id> does not exist\n";
             write(2,str.c_str(),str.length());
             bad = true;
