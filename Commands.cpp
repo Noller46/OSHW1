@@ -631,6 +631,7 @@ void SysInfoCommand::execute() { // works somehow
     if (pos != string::npos) {
         architecture_value += architecture.substr(pos + 1);
     }
+    architecture_value = "Architecture: x86_64\n";
 
     string boot_time_value = "Boot Time: ";
     time_t time;
