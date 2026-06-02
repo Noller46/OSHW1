@@ -89,12 +89,18 @@ class DiskUsageCommand : public Command {
 private:
     const char* cmd_line;
 public:
+    static unsigned long long disk_usage;
+
     DiskUsageCommand(const char *cmd_line);
 
     virtual ~DiskUsageCommand() {
     }
 
     void execute() override;
+
+    unsigned long long sum_usage(const char* path);
+
+    static void increase_disk_usage(int amount);
 };
 
 class WhoAmICommand : public Command {
@@ -450,5 +456,7 @@ unsigned long long calc_size(const char* path);
 void shift_left(const char* variable);
 
 void find_key_values_in_env(const char* cmd_line, char** args, int size, vector<string> key_value_vector);
+
+static int display_info(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf);
 
 #endif //SMASH_COMMAND_H_
