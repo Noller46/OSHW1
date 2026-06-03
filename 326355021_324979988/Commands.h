@@ -114,12 +114,6 @@ public:
 
 class USBInfoCommand : public Command {
     // TODO: Add your data members **BONUS: 10 Points**
-    struct linux_dirent {
-        unsigned long  d_ino;     /* Inode number */
-        unsigned long  d_off;     /* Not an offset; see below */
-        unsigned short d_reclen;  /* Length of this linux_dirent */
-        char           d_name[1];  /* Filename (null-terminated) */
-    }; //deff didn't copy past from the manpage
 public:
     USBInfoCommand(const char *cmd_line);
 
@@ -127,10 +121,6 @@ public:
     }
 
     void execute() override;
-
-    string ReadUsbProperty(const std::string& path);
-
-    string GetUsbProperties(const std::string& bus_port);
 };
 
 //tested
@@ -269,8 +259,6 @@ public:
     int get_max();
 
     pid_t get_pid_by_id(int jobId);
-
-    bool is_empty();
 
 };
 

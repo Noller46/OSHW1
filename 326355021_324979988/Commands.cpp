@@ -22,7 +22,6 @@
 #include <pwd.h>
 //#include <bits/valarray_before.h>
 #include <ftw.h>
-#include <sys/syscall.h>
 
 using namespace std;
 
@@ -200,9 +199,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     if (firstWord.compare("whoami") == 0) {
         return new WhoAmICommand(filtered_line);
-    }
-    if (firstWord.compare("usbinfo") == 0) {
-        return new USBInfoCommand(filtered_line);
     }
     for (auto i : getInstance().get_alias_list()) {
         if (get<0>(i) == string(firstWord)) {
@@ -927,18 +923,13 @@ void SmallShell::add_job(Command* com, pid_t pid) {
 }
 
 void JobsList::addJob(Command* com, pid_t pid, bool baba) {
-    if (is_empty()) max = 0;
     max++;
     new JobEntry(com, init, pid, max);
 }
 
-bool JobsList::is_empty(){
-    return init->next == init;
-}
-
 void JobsList::printJobsList() {
     JobEntry* trav = init->next;
-    while (trav != init) {
+    while (string(trav->get_line()) != "aaaaa") {
         string str = "[" + to_string(trav->idx) + "] " + string(trav->get_line()) + "\n";;
         write(1,str.c_str(),str.length());
         trav = trav->next;
@@ -954,7 +945,7 @@ void JobsCommand::execute() {
 
 void JobsList::removeFinishedJobs() {
     JobEntry* curr = init->next;
-    //int ind = 1;
+    int ind = 1;
 
     while(curr != init) {
         JobEntry* next = curr->next;
@@ -965,10 +956,10 @@ void JobsList::removeFinishedJobs() {
         if(result > 0)
         {
             delete curr;
-            //max --;
+            max --;
         } else {
-            //curr->idx = ind;
-            //ind ++;
+            curr->idx = ind;
+            ind ++;
         }
 
         curr = next;
@@ -1001,6 +992,10 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs): Buil
             string str = "smash error: fg: invalid arguments\n";
             write(2,str.c_str(),str.length());
             bad = true;
+        } else if (atoi(aug[1]) > jobs->get_max() || atoi(aug[1]) <= 0) {
+            string str = "smash error: fg: job-id <job-id> does not exist\n";
+            write(2,str.c_str(),str.length());
+            bad = true;
         }
         idx = atoi(aug[1]);
     }
@@ -1014,19 +1009,10 @@ void ForegroundCommand::execute() {
 }
 
 void JobsList::removeJobById(int jobId, bool print) {
-    JobEntry* trav = init->next;
-    if (trav == init) {
-        string str = "smash error: fg: jobs list is empty\n";
-        write(2,str.c_str(),str.length());
-        return;
-    }
-    while (jobId != trav->idx) {
+    JobEntry* trav = init;
+    while (jobId > 0) {
+        jobId --;
         trav = trav->next;
-        if (trav == init) {
-            string str = "smash error: fg: job-id " + to_string(jobId) + " does not exist\n";
-            write(2,str.c_str(),str.length());
-            return;
-        }
     }
     if (print) {
         string str = string(trav->get_line()) + " " + to_string(trav->get_pid()) + "\n";
@@ -1034,6 +1020,7 @@ void JobsList::removeJobById(int jobId, bool print) {
     }
     waitpid(trav->get_pid(),  nullptr, 0);
     delete trav;
+    max--;
 }
 
 int JobsList::get_max() {
@@ -1062,16 +1049,14 @@ void QuitCommand::execute() {
 
 void JobsList::killAllJobs() {
     JobEntry* trav = init->next;
-    string later = "";
-    int count = 0;
-    while (trav != init) {
-        kill(trav->get_pid(), SIGKILL);
-        later += to_string(trav->get_pid()) + ": " + string(trav->get_line()) +  "\n";
-        trav = trav->next;
-        count ++;
-    }
-    string str = "smash: sending SIGKILL signal to " + to_string(count) + " jobs:\n" + later;
+    string str = "smash: sending SIGKILL signal to " + to_string(max) + " jobs:\n";
     write(1,str.c_str(),str.length());
+    while (string(trav->get_line()) != "aaaaa") {
+        kill(trav->get_pid(), SIGKILL);
+        str = to_string(trav->get_pid()) + ": " + string(trav->get_line()) +  "\n";
+        write(1,str.c_str(),str.length());
+        trav = trav->next;
+    }
 }
 
 KillCommand::KillCommand(const char *cmd_line, JobsList *jobs): BuiltInCommand(cmd_line) {
@@ -1190,88 +1175,6 @@ unsigned long long DiskUsageCommand::sum_usage(const char* path) {
 void DiskUsageCommand::increase_disk_usage(int amount) {
     disk_usage += amount;
 }
-
-string USBInfoCommand::ReadUsbProperty(const std::string& path) {
-    int fd = open(path.c_str(), O_RDONLY);
-    if(fd == -1) {
-        // perror("smash error: open failed"); it is okay for open to fail if the file doesnt exist, we don't want to crash
-        return "-1";
-    }
-    char buffer[1024];
-    int bytes_read = read(fd, buffer, sizeof(buffer)-1);
-    if(bytes_read == -1) {
-        perror("smash error: read failed");
-        close(fd);
-        return "-1";
-    }
-    buffer[bytes_read] = '\0';
-    if (buffer[bytes_read - 1] == '\n') //files ends with \n but we need them to be in the same line
-        buffer[bytes_read - 1] = '\0';
-
-    return std::string(buffer);
-}
-
-std::string USBInfoCommand::GetUsbProperties(const std::string& bus_port) { //bus port is from the shape [0-9]-[0-9]
-    const int PROPERTIES_NUM = 6;
-    std::string suffixes[PROPERTIES_NUM] = {"devnum", "idVendor", "idProduct", "manufacturer", "product", "bMaxPower"};
-    std::string path = "/sys/bus/usb/devices/"; //found from tutorial 4 page 24 in the sysfs man page
-    std::string properties[6];
-    for(int i = 0; i < PROPERTIES_NUM; i++) {
-        std::string property = ReadUsbProperty(path + bus_port + "/" + suffixes[i]);
-        if(i <= 2 && property == "-1") { //those cannot be unknown if it is a USB
-            return "-1";
-        }
-        if(property == "-1") { //i >= 3
-            property = "N/A";
-        }
-        properties[i] = property;
-    }
-    std::string ret = "Device " + properties[0] + ": ID " + properties[1] + ":" + properties[2];
-    ret += " " + properties[3] + " " + properties[4] + " MaxPower: " + properties[5] + "\n";
-    return ret;
-
-}
-
-void USBInfoCommand::execute() {
-    const char* path = "/sys/bus/usb/devices";
-    int fd = open(path, O_RDONLY | O_DIRECTORY);
-    if(fd < 0){
-        const char *problem = "smash error: open failed";
-        perror(problem);
-        throw runtime_error("open failed");
-    }
-    std::vector<std::string> paths_vec;
-    char buff[1024];
-    int nread = 1;
-    std::string output = "";
-    while(nread != 0){
-        nread = syscall(SYS_getdents, fd, buff,  1024);
-        for (int bpos = 0; bpos < nread;) {
-            struct linux_dirent *d = (struct linux_dirent *) (buff + bpos);
-            if (strcmp(d->d_name, ".") != 0 && strcmp(d->d_name, "..") != 0) {
-                std::string check_vendor_file = std::string(path) + "/" + std::string(d->d_name) + "/idVendor";
-                int fd_check = open(check_vendor_file.c_str(), O_RDONLY);
-                if(fd_check != -1) { //if file doesn't have idVendor it is not a USB device
-                    close(fd_check); //check ended
-                    std::string device_info = GetUsbProperties(std::string(d->d_name));
-                    if(device_info != "-1") { //read properties correctly
-                        output += device_info;
-                    }
-                }
-            }
-            bpos += d->d_reclen;
-        }
-    }
-    close(fd);
-    if(output == "") {
-        std::string message = "smash error: usbinfo: no USB devices found\n";
-        write(2, message.c_str(), strlen(message.c_str()));
-        return;
-    }
-    write(1, output.c_str(), strlen(output.c_str()));
-}
-
-USBInfoCommand::USBInfoCommand(const char *cmd_line) : Command(cmd_line) {}
 
 
 // void find_key_values_in_env(const char* cmd_line, char** args, int size, vector<string> key_value_vector) {
