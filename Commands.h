@@ -113,24 +113,22 @@ public:
 };
 
 class USBInfoCommand : public Command {
-    // TODO: Add your data members **BONUS: 10 Points**
-    struct linux_dirent {
-        unsigned long  d_ino;     /* Inode number */
-        unsigned long  d_off;     /* Not an offset; see below */
-        unsigned short d_reclen;  /* Length of this linux_dirent */
-        char           d_name[1];  /* Filename (null-terminated) */
-    }; //deff didn't copy past from the manpage
+    // TODO: Add your data members *BONUS: 10 Points*
+private:
+    struct directory_struct {
+        unsigned short struct_length;
+        unsigned long inode;
+        unsigned long offset;
+        char directory[1];
+    };
 public:
     USBInfoCommand(const char *cmd_line);
 
-    virtual ~USBInfoCommand() {
-    }
+    virtual ~USBInfoCommand() {}
 
     void execute() override;
 
-    string ReadUsbProperty(const std::string& path);
-
-    string GetUsbProperties(const std::string& bus_port);
+    string find_usbs(string bus_port);
 };
 
 //tested
