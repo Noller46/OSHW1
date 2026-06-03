@@ -241,7 +241,10 @@ public:
         }
 
         const char* get_line();
+
         pid_t get_pid();
+
+
 
     };
 
@@ -272,6 +275,8 @@ public:
 
     bool is_empty();
 
+    bool locate_id(int jobId);
+
 };
 
 //only after background
@@ -290,6 +295,7 @@ public:
 //only after background
 class KillCommand : public BuiltInCommand {
     // TODO: Add your data members
+    JobsList* jobl;
     pid_t pid;
     int job_id;
     int sig;
